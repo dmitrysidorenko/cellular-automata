@@ -10,7 +10,7 @@ import "./styles.css";
 const colors = {
   grid: "#1d1c1c",
   // grid: "#fff"
-  liveCell: "blue",
+  liveCell: "yellow",
   deadCell: "#333"
 };
 
