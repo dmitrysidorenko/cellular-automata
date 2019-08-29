@@ -1,0 +1,66 @@
+html,
+body,
+#root,
+.App {
+  height: 100%;
+  margin: 0;
+  background: #1d1c1c;
+  color: white;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.App {
+  font-family: sans-serif;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.rules {
+  display: flex;
+  justify-content: center;
+}
+
+.Rule {
+  border: 2px solid transparent;
+}
+
+.Controls {
+  padding: 10px;
+  top: 0px;
+  width: 100%;
+  flex-grow: 0;
+}
+.Controls button {
+  font-size: 18px;
+  padding: 10px;
+  color: white;
+  background: black;
+  height: 50px;
+}
+.Controls label {
+  display: inline-block;
+  font-size: 16px;
+  white-space: nowrap;
+  padding: 10px;
+  z-index: 9;
+}
+
+.Playground {
+  flex-grow: 1;
+  /* max-height: calc(100% - 100px); */
+  overflow: hidden;
+}
+
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
+}
