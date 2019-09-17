@@ -6,10 +6,43 @@ import { MapInteraction } from "./lib/react-map-interaction";
 export class Playground extends Component {
   constructor(props) {
     super(props);
+    const { width, height } = props;
+    let startX = 0;
+    let startY = 0;
+    if (width > 0 && height > 0) {
+      const min = Math.min(width, height);
+      const max = Math.max(width, height);
+      const h = max - min / 2;
+      if (width > height) {
+        startX = h;
+      } else {
+        startY = h;
+      }
+    }
+    // const offsetX =
     this.state = {
       scale: 1,
-      translation: { x: 0, y: 0 }
+      translation: { x: startX, y: startY }
     };
+  }
+
+  componentDidUpdate(prevProps) {
+    const { width: prevWidth, height: prewHeight } = prevProps;
+    const { width, height } = this.props;
+    // const { width, height } = prevProps;
+    if (prevWidth === 0 && prewHeight === 0 && width !== height) {
+      const min = Math.min(width, height);
+      const max = Math.max(width, height);
+      const h = (max - min) / 2;
+      let startX = 0;
+      let startY = 0;
+      if (width > height) {
+        startX = h;
+      } else {
+        startY = h;
+      }
+      this.setState({ translation: { x: startX, y: startY } });
+    }
   }
 
   render() {
@@ -17,8 +50,10 @@ export class Playground extends Component {
     const { scale, translation } = this.state;
     const halfWidth = width / 2;
     const halfHeight = height / 2;
+    const halfMin = Math.min(height, width) / 2;
     // console.log("scale, height, width, nw, nh", scale, height, width, nw, nh);
     // console.log("translation", translation, width, height, { scale, nw, nh });
+    // console.log("tr", translation);
     return (
       <MapInteraction
         // onLongTap={this.props.onLongTap}
@@ -26,23 +61,28 @@ export class Playground extends Component {
         translation={translation}
         minScale={1}
         maxScale={10}
-        translationBounds={{
-          xMin: -1 * (width * scale - width + halfWidth),
-          xMax: width / 2,
-          yMin: -1 * (height * scale - height + halfHeight),
-          yMax: height / 2
-        }}
+        // translationBounds={{
+        //   xMin: -1 * (scale * halfMin),
+        //   xMax: width - scale * halfMin,
+        //   yMin: -1 * (scale * halfMin),
+        //   yMax: height - scale * halfMin
+        // }}
         // disablePan
-        onChange={({ scale, translation: { x, y } }) =>
+        onChange={({ scale, translation: { x, y } }) => {
           this.setState({
-            scale: scale > 1 ? scale : 1,
-            // scale,
-            translation: { x, y } // { x: x < 0 ? x : 0, y: y < 0 ? y : 0 }
-          })
-        }
+            scale,
+            translation: { x, y }
+          });
+        }}
         {...rest}
       >
-        {() => children({ scale, translation })}
+        {() => {
+          // console.log("scale:", scale);
+          return children({
+            scale,
+            translation //: { x: translation.x % width, y: translation.y % height }
+          });
+        }}
       </MapInteraction>
     );
   }

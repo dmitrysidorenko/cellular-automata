@@ -1,4 +1,6 @@
-export const point2index = (cols, [row, col]) => {
+export const point2index = (cols: number, cellCoords: [number, number]) => {
+  const row = cellCoords[0];
+  const col = cellCoords[1];
   console.assert(
     col + 1 <= cols,
     "col cannot be larger than cols  " + row + "::" + col
@@ -13,7 +15,13 @@ export const index2point = (
   return { y: Math.floor(index / cols), x: index % cols };
 };
 
-export const calcCell = (cols, rules, map, index) => {
+type Rule = { left: any; middle: any; right: any; result: any };
+export const calcCell = (
+  cols: number,
+  rules: Rule[],
+  map: { [key: string]: any },
+  index: number
+) => {
   const { y, x } = index2point(cols, index);
   console.assert(
     x + 1 <= cols,
@@ -54,8 +62,8 @@ export const createRule = (
   result: !!result
 });
 
-export const validateRulesSet = rules => {
-  const rulesAsStrings = rules.map(JSON.stringify);
+export const validateRulesSet = (rules: Rule[]) => {
+  const rulesAsStrings = rules.map(o => JSON.stringify(o));
   const asObject = rulesAsStrings.reduce(
     (acc, str) => ({ ...acc, [str]: true }),
     {}
@@ -67,7 +75,7 @@ export const validateRulesSet = rules => {
   );
 };
 
-export const getLoopCoord = (cols, x, kx) => {
+export const getLoopCoord = (cols: number, x: number, kx: number) => {
   let nextX = x + kx;
   if (nextX < 0) {
     return cols + nextX;

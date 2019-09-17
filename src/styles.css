@@ -5,7 +5,7 @@ body,
   height: 100%;
   margin: 0;
   background: #1d1c1c;
-  color: white;
+  color: rgb(182, 182, 182);
 }
 
 * {
@@ -35,11 +35,14 @@ body,
   flex-grow: 0;
 }
 .Controls button {
-  font-size: 18px;
-  padding: 10px;
-  color: white;
+  font-size: 16px;
+  padding: 5px 10px;
+  color: rgb(182, 182, 182);
+  border-color: rgb(182, 182, 182);
   background: black;
-  height: 50px;
+  /* height: 50px; */
+  border-radius: 14px;
+  margin-right: 6px;
 }
 .Controls label {
   display: inline-block;

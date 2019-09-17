@@ -1,22 +1,37 @@
-import React, { CanvasHTMLAttributes, DOMElement } from "react";
+import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
-import R from "ramda";
 import * as ca from "./ca";
-import { relMouseCoords, useInterval } from "./utils";
-import { setup as setupZoom } from "./zoom";
+import { relMouseCoords } from "./utils";
 import { Playground } from "./Playgraoud";
 import "./styles.css";
 
 const colors = {
-  grid: "#1d1c1c",
+  // grid: "#1d1c1c",
+  // deadCell: "#555",
+  grid: "#333",
+  deadCell: "black",
   // grid: "#fff"
-  liveCell: "yellow",
-  deadCell: "#333"
+  liveCell: "#f9e000"
 };
 
-function drawRect(ctx, x, y, w, h, backgroundColor, borderColor) {
+function drawRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  backgroundColor: string,
+  borderColor: string
+) {
   ctx.beginPath();
-  ctx.rect(x, y, w, h);
+  const borderw = 1;
+  const dborderw = borderw * 4;
+  ctx.rect(
+    x,
+    y,
+    w > dborderw ? w - borderw : w,
+    h > dborderw ? h - borderw : h
+  );
   if (borderColor) {
     ctx.strokeStyle = borderColor;
     ctx.stroke();
@@ -27,17 +42,28 @@ function drawRect(ctx, x, y, w, h, backgroundColor, borderColor) {
   }
 }
 
-function prepareCanvas(ctx, canvas, width, height) {
+function prepareCanvas(
+  ctx: CanvasRenderingContext2D | null,
+  canvas: HTMLCanvasElement,
+  width: number,
+  height: number,
+  cellWidthScaled: number
+) {
+  if (!canvas || !ctx) {
+    return;
+  }
   ctx.strokeStyle = colors.grid;
   ctx.fillStyle = colors.liveCell;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1; //cellWidthScaled > 4 ? 1 : 0;
   canvas.width = width;
   canvas.height = height;
 }
 
 function drawPoint(
   ctx: any,
-  cell: Cell,
+  cell: ICell,
+  xi: number,
+  yi: number,
   options: {
     cellWidth: number;
     cellHeight: number;
@@ -47,52 +73,90 @@ function drawPoint(
     width: number;
   }
 ) {
-  const { cellWidth, cellHeight, offsetX, offsetY, height, width } = options;
-  const { x, y, value } = cell;
-  const left = x * cellWidth + offsetX;
-  const top = y * cellHeight + offsetY;
-  if (left > -cellWidth && top >= -cellHeight && left < width && top < height) {
-    const background = value ? colors.liveCell : colors.deadCell;
-    drawRect(ctx, left, top, cellWidth, cellHeight, background, colors.grid);
+  const x = xi * options.cellWidth + options.offsetX;
+  const y = yi * options.cellHeight + options.offsetY;
+  if (
+    x > -options.cellWidth &&
+    y >= -options.cellHeight &&
+    x < options.width &&
+    y < options.height
+  ) {
+    const background = cell.value ? colors.liveCell : colors.deadCell;
+    drawRect(
+      ctx,
+      x,
+      y,
+      options.cellWidth,
+      options.cellHeight,
+      background,
+      colors.grid
+    );
   }
 }
 
-type Cell = { x: number; y: number; value: boolean; index: number };
-function makeCell(value: boolean, index: number, cols: number): Cell {
+interface ICell {
+  x: number;
+  y: number;
+  value: boolean;
+  index: number;
+  updated: boolean;
+}
+function makeCell(value: boolean, index: number, cols: number): ICell {
   const { x, y } = ca.index2point(cols, index);
-  return { x, y, value, index };
+  return { x, y, value, index, updated: true };
 }
 
 const CanvasWrapperStyle = { width: "100%", height: "100%" };
 
-function getRealMouseCoords(canvas, event) {
+function getRealMouseCoords(
+  canvas: HTMLCanvasElement,
+  event: React.SyntheticEvent
+) {
   return relMouseCoords.call(canvas, event);
 }
 
 function getCellIndexFromClick(
-  e,
-  canvas,
-  { offsetX, offsetY, cellWidth, cellHeight, cols }
+  e: React.SyntheticEvent,
+  canvas: HTMLCanvasElement,
+  {
+    offsetX,
+    offsetY,
+    cellWidth,
+    cellHeight,
+    cols
+  }: {
+    offsetX: number;
+    offsetY: number;
+    cellWidth: number;
+    cellHeight: number;
+    cols: number;
+  }
 ) {
   const { x, y } = getRealMouseCoords(canvas, e);
-  const realX = x - offsetX;
-  const realY = y - offsetY;
-  const col = Math.ceil(realX / cellWidth) - 1;
-  const row = Math.ceil(realY / cellHeight) - 1;
-  console.log("coords x, y, row, col", x, y, row, col);
-  return ca.point2index(cols, [row, col]);
+  const sideWidth = cellWidth * cols;
+  const realX = x - (offsetX % sideWidth);
+  const realY = y - (offsetY % sideWidth);
+  const col = (Math.ceil(realX / cellWidth) - 1) % cols;
+  const row = (Math.ceil(realY / cellHeight) - 1) % cols;
+  const rNew = row % cols;
+  const cNew = col % cols;
+  const row2 = rNew < 0 ? cols + rNew : rNew;
+  const col2 = cNew < 0 ? cols + cNew : cNew;
+  // console.log("coords x, y, row, col", x, y, row, col);
+  return ca.point2index(cols, [row2, col2]);
 }
 
-const from = (n, fn = (_, i) => i) => Array.from({ length: n }, fn);
+const from = (n: number, fn = (_: any, i: number): any => i): any[] =>
+  Array.from({ length: n }, fn);
 
 const makeMatrix = (cols: number) =>
-  from(cols * cols, (_, index) => {
+  from(cols * cols, (_: any, index: number) => {
     return makeCell(false, index, cols);
   });
 
-const gtZero = val => (val < 1 ? 1 : val);
+const gtZero = (val: number) => (val < 1 ? 1 : val);
 
-const makeCellSiblingsMap = (cols: number, matrix: Cell[]) => {
+const makeCellSiblingsMap = (cols: number, matrix: ICell[]) => {
   return matrix.map(cell => {
     const { x, y } = cell;
     return [
@@ -122,7 +186,7 @@ const makeCellSiblingsMap = (cols: number, matrix: Cell[]) => {
 
 interface IGameProps {
   cols: number;
-  viewport?: IGameViewport;
+  viewport: IGameViewport;
 }
 interface IViewportTranslation {
   x: number;
@@ -134,14 +198,20 @@ interface IGameViewport {
   scale: number;
   translation: IViewportTranslation;
 }
+interface IGameViewportUpdate {
+  width?: number;
+  height?: number;
+  scale?: number;
+  translation?: IViewportTranslation;
+}
 interface IGame {
   props: IGameProps;
-  matrix: Cell[];
-  matrixBuffer: Cell[];
+  matrix: ICell[];
+  matrixBuffer: ICell[];
   siblingsMap: number[][];
   viewport: IGameViewport;
-  canvasRef: { current: HTMLCanvasElement };
-  ctx: CanvasRenderingContext2D;
+  canvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
+  ctx: CanvasRenderingContext2D | null;
   generation: number;
   updateTimeout: number;
   update(): void;
@@ -149,40 +219,71 @@ interface IGame {
   draw(): void;
   reset(): void;
   swap(): void;
+  setViewport(viewport: IGameViewportUpdate): void;
+  setCols(cols: number): void;
 }
-const calcScaledCellWidth = (width, height, cols, scale) => {
+
+const calcCellWidth = (width: number, height: number, cols: number) => {
+  const cellWidth = Math.min(width, height) / cols;
+  return cellWidth;
+};
+const calcScaledCellWidth = (
+  width: number,
+  height: number,
+  cols: number,
+  scale: number
+) => {
   const cellWidth = Math.min(width, height) / cols;
   return cellWidth * scale;
 };
+
 class Game implements IGame {
   props: IGameProps;
-  matrix: Cell[];
-  matrixBuffer: Cell[];
+  matrix: ICell[];
+  matrixBuffer: ICell[];
   siblingsMap: number[][];
   viewport: IGameViewport;
   canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
+  ctx: CanvasRenderingContext2D | null;
   generation: number;
   updateTimeout: number;
-  canvasRef: { current: HTMLCanvasElement };
+  canvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
+  clean: boolean;
 
-  constructor(props: IGameProps, canvasRef: { current: HTMLCanvasElement }) {
+  constructor(
+    props: IGameProps,
+    canvasRef: React.MutableRefObject<HTMLCanvasElement | null>
+  ) {
     this.generation = 0;
-    this.ctx = canvasRef.current && canvasRef.current.getContext("2d");
+    this.ctx = null;
+    if (canvasRef.current) {
+      this.ctx = canvasRef.current.getContext("2d");
+    }
     this.canvasRef = canvasRef;
     this.props = props;
     this.matrix = [];
     this.matrixBuffer = [];
     this.siblingsMap = [];
     this.viewport = props.viewport;
+    this.clean = false;
     this.reset();
   }
-
+  setViewport(viewport: IGameViewportUpdate) {
+    this.viewport = { ...this.viewport, ...viewport };
+    this.clean = false;
+  }
+  setCols(cols: number) {
+    if (this.props.cols !== cols) {
+      this.props.cols = cols;
+      this.reset();
+    }
+  }
   reset = () => {
     this.matrix = makeMatrix(this.props.cols);
     this.matrixBuffer = makeMatrix(this.props.cols);
     this.siblingsMap = makeCellSiblingsMap(this.props.cols, this.matrix);
     this.generation = 0;
+    this.clean = false;
   };
   swap = () => {
     const tmp = this.matrix;
@@ -191,6 +292,7 @@ class Game implements IGame {
   };
   toggleCell = (index: number) => {
     this.matrix[index].value = !this.matrix[index].value;
+    this.clean = false;
   };
   start = () => {
     const rate = 100;
@@ -203,7 +305,7 @@ class Game implements IGame {
         this.update();
         lastTimestamp = currentTimestamp;
         afterTimestamp = Date.now();
-        console.log("took", afterTimestamp - currentTimestamp);
+        // console.log("took", afterTimestamp - currentTimestamp);
       }
       this.updateTimeout = setTimeout(
         upd,
@@ -234,49 +336,116 @@ class Game implements IGame {
         }
       }
       matrixBuffer[i].value = result;
+      matrixBuffer[i].updated = cell.value !== result;
+
+      if (cell.value !== result && this.clean) {
+        this.clean = false;
+      }
     });
     // this.matrix = buffer;
     this.swap();
   };
-
+  options: {
+    cellWidth: number;
+    cellHeight: number;
+    offsetX: number;
+    offsetY: number;
+    height: number;
+    width: number;
+  } = {
+    cellWidth: 0,
+    cellHeight: 0,
+    offsetX: 0,
+    offsetY: 0,
+    height: 0,
+    width: 0
+  };
   draw = () => {
+    if (this.clean) {
+      return;
+    }
     if (!this.ctx && !this.canvasRef.current) {
       return;
     }
     if (!this.ctx && this.canvasRef.current) {
       this.ctx = this.canvasRef.current.getContext("2d");
     }
-    const { cols } = this.props;
-    const {
-      width,
-      height,
-      scale,
-      translation: { x: offsetX, y: offsetY }
-    } = this.viewport;
-    const cellWidth = calcScaledCellWidth(width, height, cols, scale);
-    prepareCanvas(this.ctx, this.canvasRef.current, width, height);
-    this.matrix.forEach((cell: Cell) => {
-      const left = cell.x * cellWidth + offsetX;
-      const top = cell.y * cellWidth + offsetY;
-      if (
-        left > -cellWidth &&
-        top >= -cellWidth &&
-        left < width &&
-        top < height
+    const cols = this.props.cols;
+    const width = this.viewport.width;
+    const height = this.viewport.height;
+    const scale = this.viewport.scale;
+    const translation = this.viewport.translation;
+    const offsetX = translation.x;
+    const offsetY = translation.y;
+    const cellWidth = calcCellWidth(width, height, cols);
+    const cellWidthScaled = cellWidth * scale;
+    this.options.cellWidth = cellWidthScaled;
+    this.options.cellHeight = cellWidthScaled;
+    this.options.offsetX = offsetX;
+    this.options.offsetY = offsetY;
+    this.options.height = height;
+    this.options.width = width;
+    // console.log(widthXscale, colsXcellWidth, maxNumberOnScreen);
+    const colsXVisible = Math.floor(width / cellWidthScaled) + 1;
+    const colsYVisible = Math.floor(height / cellWidthScaled) + 1;
+    const offsetXCols = -Math.ceil(offsetX / cellWidthScaled);
+    const offsetYCols = -Math.ceil(offsetY / cellWidthScaled);
+    this.canvasRef.current &&
+      prepareCanvas(
+        this.ctx,
+        this.canvasRef.current,
+        width,
+        height,
+        cellWidthScaled
+      );
+
+    for (
+      let rowV = offsetYCols;
+      rowV <= colsYVisible + offsetYCols;
+      rowV += 1
+    ) {
+      for (
+        let colV = offsetXCols;
+        colV <= colsXVisible + offsetXCols;
+        colV += 1
       ) {
-        drawPoint(this.ctx, cell, {
-          cellWidth,
-          cellHeight: cellWidth,
-          offsetX,
-          offsetY,
-          height,
-          width
-        });
+        const rNew = rowV % cols;
+        const cNew = colV % cols;
+        const r = rNew < 0 ? cols + rNew : rNew;
+        const c = cNew < 0 ? cols + cNew : cNew;
+        const index2Draw = ca.point2index(cols, [r, c]);
+        const cell = this.matrix[index2Draw];
+        if (cell) {
+          const rs = Math.floor(rowV / cols);
+          const cs = Math.floor(colV / cols);
+          const x = cell.x + cs * cols;
+          const y = cell.y + rs * cols;
+          // debugger;
+          drawPoint(this.ctx, cell, x, y, this.options);
+        } else {
+          debugger;
+        }
       }
-    });
+    }
+
+    // for (let cellIndex = 0; cellIndex < this.matrix.length; cellIndex++) {
+    //   const cell = this.matrix[cellIndex];
+    //   drawPoint(this.ctx, cell, cell.x, cell.y, this.options);
+    // }
+
+    this.clean = true;
   };
 }
 
+type GameComponentProps = {
+  cols: number;
+  width: number;
+  height: number;
+  translation: IViewportTranslation;
+  scale: number;
+  running: boolean;
+  onInit: Function;
+};
 function GameComponent({
   cols,
   width,
@@ -285,16 +454,16 @@ function GameComponent({
   scale,
   running,
   onInit
-}) {
-  const canvasRef = React.useRef();
+}: GameComponentProps) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const game = React.useMemo(() => {
-    console.log(
-      "translation, scale, width, height",
-      translation,
-      scale,
-      width,
-      height
-    );
+    // console.log(
+    //   "translation, scale, width, height",
+    //   translation,
+    //   scale,
+    //   width,
+    //   height
+    // );
     return new Game(
       {
         cols,
@@ -304,29 +473,35 @@ function GameComponent({
     );
   }, []);
 
-  React.useEffect(() => onInit(game), [game]);
+  useEffect(() => onInit(game), [game]);
+  useEffect(() => {
+    game.setCols(cols);
+  }, [cols, game]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!game) {
       return;
     }
-    game.viewport.height = height;
-    game.viewport.width = width;
-    game.viewport.scale = scale;
+    game.setViewport({
+      height,
+      width,
+      scale,
+      translation
+    });
   }, [translation, scale, height, width, game]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     game && game.draw();
   }, [game]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!game) {
       return;
     }
-    const rate = 30;
+    const rate = 60;
     const frameRateX = 1000 / rate;
     let last = Date.now();
-    let index = null;
+    let index: any = null;
 
     function draw() {
       const timestamp = Date.now();
@@ -335,23 +510,23 @@ function GameComponent({
         last = timestamp;
         game.draw();
       }
-      index = window.requestAnimationFrame(draw);
+      setTimeout(() => {
+        index = window.requestAnimationFrame(draw);
+      }, 0);
     }
     window.requestAnimationFrame(draw);
     return () => {
-      console.log("cancel drawing loop");
       window.cancelAnimationFrame(index);
     };
   }, [game]);
-  console.log("running", running);
 
   const onClick = React.useCallback(
     e => {
-      if (!game) {
+      if (!game || !canvasRef.current) {
         return;
       }
       // const cellWidth = Math.min(width, height) / cols;
-      console.log("width, height, cols, scale", width, height, cols, scale);
+      // console.log("width, height, cols, scale", width, height, cols, scale);
       const cellWidth = calcScaledCellWidth(width, height, cols, scale);
       const cellIndex = getCellIndexFromClick(e, canvasRef.current, {
         offsetX: game.viewport.translation.x,
@@ -371,18 +546,34 @@ function GameComponent({
   );
 }
 
+const useWindowResize = () => {
+  const [[w, h], setWH] = useState([window.innerWidth, window.innerHeight]);
+  const onResize = () => {
+    setWH([window.innerWidth, window.innerHeight]);
+  };
+  useEffect(() => {
+    window && window.addEventListener("resize", onResize);
+    return () => {
+      window && window.removeEventListener("resize", onResize);
+    };
+  }, []);
+  return [w, h];
+};
+
 function App() {
-  const playgroundRef = React.useRef();
+  const playgroundRef = React.useRef<HTMLDivElement>(null);
   const [running, setRunning] = React.useState(false);
   const [game, setGame] = React.useState();
   const [cols, setCols] = React.useState(80);
-  const onLongTap = e => {};
+  const onLongTap = (e: React.SyntheticEvent) => {};
 
-  const resetMap = () => {
+  const resetMap = (e: React.SyntheticEvent) => {
     game && game.reset();
+    e && e.stopPropagation && e.stopPropagation();
+    e && e.preventDefault && e.preventDefault();
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (game) {
       if (running) {
         game.start();
@@ -392,6 +583,8 @@ function App() {
     }
   }, [running, game]);
 
+  useWindowResize();
+
   const width =
     (playgroundRef.current && playgroundRef.current.offsetWidth) || 0;
   const height =
@@ -400,10 +593,20 @@ function App() {
   return (
     <div className="App">
       <div className="Controls">
-        <button onClick={() => game.update()}>+1</button>
         <button
-          onClick={() => {
+          onClick={e => {
+            game.update();
+            e && e.stopPropagation && e.stopPropagation();
+            e && e.preventDefault && e.preventDefault();
+          }}
+        >
+          +1
+        </button>
+        <button
+          onClick={e => {
             setRunning(!running);
+            e && e.stopPropagation && e.stopPropagation();
+            e && e.preventDefault && e.preventDefault();
           }}
         >
           {running ? "stop" : "start"}
@@ -411,11 +614,11 @@ function App() {
         <button onClick={resetMap}>Reset map</button>
         <button
           onTouchStart={e => {
-            console.log("click");
+            // console.log("click");
             window.location.reload();
           }}
           onClick={e => {
-            console.log("click");
+            // console.log("click");
             window.location.reload();
           }}
         >
@@ -430,7 +633,7 @@ function App() {
             value={cols}
             onChange={e => {
               setRunning(false);
-              resetMap();
+              resetMap(e);
               setCols(gtZero(+e.target.value));
             }}
           />
@@ -444,18 +647,17 @@ function App() {
       >
         <Playground
           onLongTap={onLongTap}
-          minScale={Math.min(width, height) / (cols * 10)}
+          minScale={0.75}
           width={width}
           height={height}
         >
-          {({ scale, translation }) => {
-            if (game) {
-              console.log("game, scale, translation", game, scale, translation);
-              game.viewport.translation = translation;
-              game.viewport.scale = scale;
-              game.viewport.width = width;
-              game.viewport.height = height;
-            }
+          {({
+            scale,
+            translation
+          }: {
+            scale: number;
+            translation: IViewportTranslation;
+          }) => {
             return (
               <GameComponent
                 onInit={setGame}
