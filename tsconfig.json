@@ -7,6 +7,10 @@
       "es6",
       "dom"
     ],
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/@types"
+    ],
     "sourceMap": true,
     "allowJs": true,
     "jsx": "react",

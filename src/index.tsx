@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
+import AddToHomescreen from "react-add-to-homescreen";
 import * as ca from "./ca";
 import { relMouseCoords } from "./utils";
 import { Playground } from "./Playgraoud";
@@ -11,7 +12,16 @@ const colors = {
   grid: "#333",
   deadCell: "black",
   // grid: "#fff"
-  liveCell: "#f9e000"
+  liveCell: "#f9e000",
+  startBtn: "green",
+  stopBtn: "darkred"
+};
+const messages = {
+  runOneStep: "+1",
+  startBtn: "Start",
+  stopBtn: "Stop",
+  reloadPageBtn: "Reload",
+  resetMapBtn: "Reset"
 };
 
 function drawRect(
@@ -213,7 +223,7 @@ interface IGame {
   canvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
   ctx: CanvasRenderingContext2D | null;
   generation: number;
-  updateTimeout: number;
+  updateTimeout?: number;
   update(): void;
   toggleCell(index: number): void;
   draw(): void;
@@ -243,10 +253,9 @@ class Game implements IGame {
   matrixBuffer: ICell[];
   siblingsMap: number[][];
   viewport: IGameViewport;
-  canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D | null;
   generation: number;
-  updateTimeout: number;
+  updateTimeout?: number = 0;
   canvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
   clean: boolean;
 
@@ -568,6 +577,7 @@ function App() {
   const onLongTap = (e: React.SyntheticEvent) => {};
 
   const resetMap = (e: React.SyntheticEvent) => {
+    setRunning(false);
     game && game.reset();
     e && e.stopPropagation && e.stopPropagation();
     e && e.preventDefault && e.preventDefault();
@@ -590,6 +600,12 @@ function App() {
   const height =
     (playgroundRef.current && playgroundRef.current.offsetHeight) || 0;
 
+  const handleAddToHomescreenClick = () => {
+    alert(`
+        1. Open Share menu
+        2. Tap on "Add to Home Screen" button`);
+  };
+
   return (
     <div className="App">
       <div className="Controls">
@@ -600,18 +616,21 @@ function App() {
             e && e.preventDefault && e.preventDefault();
           }}
         >
-          +1
+          {messages.runOneStep}
         </button>
         <button
+          style={{
+            backgroundColor: running ? colors.stopBtn : colors.startBtn
+          }}
           onClick={e => {
             setRunning(!running);
             e && e.stopPropagation && e.stopPropagation();
             e && e.preventDefault && e.preventDefault();
           }}
         >
-          {running ? "stop" : "start"}
+          {running ? messages.stopBtn : messages.startBtn}
         </button>
-        <button onClick={resetMap}>Reset map</button>
+        <button onClick={resetMap}>{messages.resetMapBtn}</button>
         <button
           onTouchStart={e => {
             // console.log("click");
@@ -622,7 +641,7 @@ function App() {
             window.location.reload();
           }}
         >
-          Reload
+          {messages.reloadPageBtn}
         </button>
         <label>
           <input
@@ -672,6 +691,10 @@ function App() {
           }}
         </Playground>
       </div>
+      <AddToHomescreen
+        title="Wanna app? Add this game to Home Screen!"
+        onAddToHomescreenClick={handleAddToHomescreenClick}
+      />
     </div>
   );
 }

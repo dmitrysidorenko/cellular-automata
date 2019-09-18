@@ -37,7 +37,7 @@ body,
 .Controls button {
   font-size: 16px;
   padding: 5px 10px;
-  color: rgb(182, 182, 182);
+  color: #dadada;
   border-color: rgb(182, 182, 182);
   background: black;
   /* height: 50px; */
