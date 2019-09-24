@@ -4,7 +4,6 @@ import AddToHomescreen from "react-add-to-homescreen";
 import * as ca from "./ca";
 import { relMouseCoords } from "./utils";
 import { Playground } from "./Playgraoud";
-// import Game2 from "./components/Game";
 import { Colors } from "./design/palette";
 import "./styles.css";
 
@@ -114,12 +113,18 @@ interface ICell {
   x: number;
   y: number;
   value: boolean;
+  age: number;
   index: number;
   updated: boolean;
 }
-function makeCell(value: boolean, index: number, cols: number): ICell {
+function makeCell(
+  value: boolean,
+  index: number,
+  cols: number,
+  age: number = 0
+): ICell {
   const { x, y } = ca.index2point(cols, index);
-  return { x, y, value, index, updated: true };
+  return { x, y, value, index, updated: true, age };
 }
 
 const CanvasWrapperStyle = { width: "100%", height: "100%" };
@@ -224,6 +229,9 @@ export interface IGameViewportUpdate {
 export interface IGameColors {
   liveCell: string;
   deadCell: string;
+  oldCell: string;
+  veryOldCell: string;
+  superOldCell: string;
 }
 
 export interface IGame {
@@ -276,7 +284,10 @@ export class Game implements IGame {
   canvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
   clean: boolean;
   colors: IGameColors = {
-    liveCell: Colors.Primary,
+    liveCell: Colors.AliveCell,
+    oldCell: Colors.OldCell,
+    veryOldCell: Colors.VeryOldCell,
+    superOldCell: Colors.SuperOldCell,
     deadCell: Colors.DeadCell
   };
   _gameStateChangeCallbacks: GameStateChangeCallback[] = [];
@@ -385,8 +396,14 @@ export class Game implements IGame {
           result = true;
         }
       }
-      matrixBuffer[i].value = result;
-      matrixBuffer[i].updated = cell.value !== result;
+      const bufferCell = matrixBuffer[i];
+      if (result) {
+        bufferCell.age = cell.value ? bufferCell.age + 1 : 1;
+      } else {
+        bufferCell.age = 0;
+      }
+      bufferCell.value = result;
+      bufferCell.updated = cell.value !== result;
 
       if (cell.value !== result && this.clean) {
         this.clean = false;
@@ -474,9 +491,18 @@ export class Game implements IGame {
           const x = cell.x + cs * cols;
           const y = cell.y + rs * cols;
           // debugger;
-          const color = cell.value
-            ? this.colors.liveCell
-            : this.colors.deadCell;
+          let color = this.colors.deadCell;
+          if (cell.value) {
+            if (cell.age > 16) {
+              color = this.colors.superOldCell;
+            } else if (cell.age > 8) {
+              color = this.colors.veryOldCell;
+            } else if (cell.age > 2) {
+              color = this.colors.oldCell;
+            } else {
+              color = this.colors.liveCell;
+            }
+          }
           drawPoint(this.ctx, cell, x, y, this.options, color, k);
         } else {
           debugger;
@@ -627,10 +653,8 @@ function App() {
     null
   );
   const [appState, setAppState] = React.useState<AppState>(0);
-  const [suspended, setSuspended] = React.useState(false);
   const [game, setGame] = React.useState<Game>();
   const [cols, setCols] = React.useState(80);
-  const onLongTap = (e: React.SyntheticEvent) => {};
 
   const resetMap = useCallback(() => {
     setAppState(0);
@@ -647,10 +671,24 @@ function App() {
 
   useEffect(() => {
     if (game) {
-      game.setColors({
-        liveCell: appState === 1 ? Colors.Primary : Colors.Secondary,
-        deadCell: Colors.DeadCell
-      });
+      if (appState === 0) {
+        game.setColors({
+          liveCell: Colors.Secondary,
+          deadCell: Colors.DeadCell,
+          oldCell: Colors.Secondary,
+          veryOldCell: Colors.Secondary,
+          superOldCell: Colors.Secondary
+        });
+      } else {
+        game.setColors({
+          liveCell: Colors.AliveCell,
+          deadCell: Colors.DeadCell,
+          oldCell: Colors.OldCell,
+          veryOldCell: Colors.VeryOldCell,
+          superOldCell: Colors.SuperOldCell
+        });
+      }
+
       if (appState === 1) {
         game.start();
       } else {
@@ -682,23 +720,18 @@ function App() {
       <div
         className="Controls"
         style={{
-          borderColor: appState ? Colors.Danger : Colors.Secondary
+          borderColor: [Colors.Secondary, Colors.Danger, Colors.Secondary][
+            appState
+          ]
         }}
       >
         <button
           className="emoji"
           onClick={e => {
             if (game) {
-              game.setColors({
-                liveCell: Colors.Primary,
-                deadCell: Colors.DeadCell
-              });
+              setAppState(2);
               game.update();
               game.draw(true);
-              game.setColors({
-                liveCell: Colors.Secondary,
-                deadCell: Colors.DeadCell
-              });
             }
 
             e && e.stopPropagation && e.stopPropagation();
@@ -751,17 +784,6 @@ function App() {
               </option>
             ))}
           </select>
-          {/* <input
-            type="range"
-            min={10}
-            max={200}
-            step={10}
-            value={cols}
-            onChange={onColsChange}
-          /> */}
-          {/* <div>
-            {cols} x {cols}
-          </div> */}
         </label>
       </div>
       <div
@@ -770,7 +792,6 @@ function App() {
         unselectable="on"
       >
         <Playground
-          onLongTap={onLongTap}
           minScale={cols <= 40 ? 0.6 : 1}
           maxScale={cols / 5}
           width={width}

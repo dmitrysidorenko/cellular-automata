@@ -11,7 +11,6 @@ import {
   PlusButton,
   PlayPauseButton,
   CleanButton,
-  MenuButton,
   SettingsButton
 } from "../Buttons";
 import GameContext from "../../contexts/GameContext";

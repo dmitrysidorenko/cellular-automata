@@ -1,9 +1,8 @@
-import React, { Component, ReactNode } from "react";
-import PropTypes from "prop-types";
+import React, { Component } from "react";
 
 import Controls from "./Controls";
 
-import { clamp, distance, midpoint, touchPt, touchDistance } from "./geometry";
+import { clamp, midpoint, touchPt, touchDistance } from "./geometry";
 import makePassiveEventOption from "./makePassiveEventOption";
 
 // The amount that a value of a dimension will change given a new scale
@@ -11,21 +10,16 @@ const coordChange = (coordinate, scaleRatio) => {
   return scaleRatio * coordinate - coordinate;
 };
 
-const translationShape = PropTypes.shape({
-  x: PropTypes.number,
-  y: PropTypes.number
-});
-
-function isDescendant(parent, child) {
-  var node = child.parentNode;
-  while (node !== null) {
-    if (node === parent) {
-      return true;
-    }
-    node = node.parentNode;
-  }
-  return false;
-}
+// function isDescendant(parent, child) {
+//   var node = child.parentNode;
+//   while (node !== null) {
+//     if (node === parent) {
+//       return true;
+//     }
+//     node = node.parentNode;
+//   }
+//   return false;
+// }
 
 type Pointer = any;
 type Translation = {
@@ -50,8 +44,7 @@ type MapInteractionProps = {
   defaultTranslation: Translation;
   disableZoom: boolean;
   disablePan: boolean;
-  onChange: () => void;
-  onLongTap: () => void;
+  onChange: (e?: any) => void;
   translationBounds?: TranslationBounds;
   minScale: number;
   maxScale: number;
@@ -124,7 +117,7 @@ class MapInteraction extends Component<
   state = getInitialState(this.props);
   startPointerInfo?: any;
   containerNodeRef = React.createRef<HTMLDivElement>();
-  containerNode: HTMLDivElement | null;
+  containerNode: HTMLDivElement | null = this.containerNodeRef.current || null;
 
   componentDidMount() {
     this.containerNode = this.containerNodeRef.current;
@@ -230,37 +223,26 @@ class MapInteraction extends Component<
     https://developer.mozilla.org/en-US/docs/Web/API/Touch_events/Supporting_both_TouchEvent_and_MouseEvent
   */
 
-  onMouseDown = (e: React.MouseEvent) => {
+  onMouseDown = (e: any) => {
     // console.log("onMouseDown", e);
     // e.preventDefault();
     this.setPointerState([e]);
   };
 
-  onTouchDown = (e: React.TouchEvent) => {
-    // console.log("onTouchDown", e);
+  onTouchDown = (e: any) => {
     // e.preventDefault();
     this.setPointerState(e.touches);
   };
 
-  onMouseUp = (e: React.MouseEvent) => {
-    const isDesc = isDescendant(this.containerNode, e.target);
-    if (isDesc) {
-      // console.log(this.containerNode, e.target);
-      this.maybeLongTap(e);
-      // e.preventDefault();
-    }
+  onMouseUp = (e: any) => {
     this.setPointerState();
   };
 
-  onTouchEnd = (e: React.TouchEvent) => {
-    if (isDescendant(this.containerNode, e.target)) {
-      this.maybeLongTap(e);
-      // e.preventDefault();
-    }
+  onTouchEnd = (e: any) => {
     this.setPointerState(e.touches);
   };
 
-  onMouseMove = (e: React.MouseEvent) => {
+  onMouseMove = (e: any) => {
     if (!this.startPointerInfo || this.props.disablePan) {
       return;
     }
@@ -268,7 +250,7 @@ class MapInteraction extends Component<
     this.onDrag(e);
   };
 
-  onTouchMove = (e: React.TouchEvent) => {
+  onTouchMove = (e: any) => {
     if (!this.startPointerInfo) {
       return;
     }
@@ -330,7 +312,7 @@ class MapInteraction extends Component<
     this.scaleFromPoint(newScale, mousePos);
   };
 
-  setPointerState = (pointers: Pointer[]) => {
+  setPointerState = (pointers?: Pointer[]) => {
     if (!pointers || pointers.length === 0) {
       this.startPointerInfo = undefined;
       return;
@@ -474,47 +456,17 @@ class MapInteraction extends Component<
   };
 
   changeScale = delta => {
-    const targetScale = this.state.scale + delta;
-    const { minScale, maxScale } = this.props;
-    const scale = clamp(minScale, targetScale, maxScale);
+    if (this.containerNode) {
+      const targetScale = this.state.scale + delta;
+      const { minScale, maxScale } = this.props;
+      const scale = clamp(minScale, targetScale, maxScale);
 
-    const rect = this.containerNode.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
+      const rect = this.containerNode.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
 
-    const focalPoint = this.clientPosToTranslatedPos({ x, y });
-    this.scaleFromPoint(scale, focalPoint);
-  };
-
-  maybeLongTap = e => {
-    if (this.props.onLongTap && this.startPointerInfo) {
-      // console.log(
-      //   "onLongTap candidate ",
-      //   this.startPointerInfo,
-      //   this.startPointerInfo.translation === this.state.translation
-      // );
-      const { x: prevX, y: prevY } = this.startPointerInfo.translation;
-      const { x, y } = this.state.translation;
-      if (this.startPointerInfo) {
-        if (
-          this.startPointerInfo.pointers &&
-          this.startPointerInfo.pointers.length === 1 &&
-          prevX === x &&
-          prevY === y
-        ) {
-          const tapDuration = Date.now() - this.startPointerInfo.timestamp;
-          // console.log("tapDuration ", tapDuration);
-          if (
-            tapDuration >= this.props.longtapMinDuration &&
-            tapDuration <= this.props.longtapMaxDuration
-          ) {
-            this.props.onLongTap(e, {
-              translation: this.state.translation,
-              scale: this.state.scale
-            });
-          }
-        }
-      }
+      const focalPoint = this.clientPosToTranslatedPos({ x, y });
+      this.scaleFromPoint(scale, focalPoint);
     }
   };
 
