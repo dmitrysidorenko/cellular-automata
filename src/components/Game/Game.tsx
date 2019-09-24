@@ -1,21 +1,23 @@
 import React, { useEffect, useState, useCallback } from "react";
 import ReactDOM from "react-dom";
 import AddToHomescreen from "react-add-to-homescreen";
-import * as ca from "./ca";
-import { relMouseCoords } from "./utils";
-import { Playground } from "./Playgraoud";
-// import Game2 from "./components/Game";
-import { Colors } from "./design/palette";
-import "./styles.css";
-
-window["Colors"] = Colors;
+import * as ca from "../../ca";
+import { relMouseCoords } from "../../utils";
+import { Playground } from "../../Playgraoud";
+import "./Game.css";
 
 const colors = {
-  grid: Colors.Background,
-  deadCell: Colors.DeadCell,
-  liveCell: Colors.Primary,
-  startBtn: Colors.Primary,
-  stopBtn: Colors.Danger
+  // grid: "#1d1c1c",
+  // deadCell: "#555",
+  // grid: "#333",
+  grid: "#222",
+  // deadCell: "black",
+  deadCell: "#111",
+  // grid: "#fff"
+  liveCell: "#f9e000",
+  // liveCell: "#6a92b2",
+  startBtn: "green",
+  stopBtn: "darkred"
 };
 const messages = {
   runOneStep: "1️⃣",
@@ -85,7 +87,6 @@ function drawPoint(
     height: number;
     width: number;
   },
-  color: string,
   k: number = 1
 ) {
   const x = xi * options.cellWidth + options.offsetX;
@@ -96,7 +97,8 @@ function drawPoint(
     x < options.width &&
     y < options.height
   ) {
-    ctx.fillStyle = color;
+    const background = cell.value ? colors.liveCell : colors.deadCell;
+    ctx.fillStyle = background;
     ctx.strokeStyle = colors.grid;
     drawRect(
       ctx,
@@ -104,7 +106,7 @@ function drawPoint(
       cell.value ? y + k : y + k,
       options.cellWidth - k * 2,
       options.cellHeight - k * 2,
-      color,
+      background,
       colors.grid
     );
   }
@@ -200,33 +202,27 @@ const makeCellSiblingsMap = (cols: number, matrix: ICell[]) => {
   });
 };
 
-export interface IGameProps {
+interface IGameProps {
   cols: number;
   viewport: IGameViewport;
 }
-export interface IViewportTranslation {
+interface IViewportTranslation {
   x: number;
   y: number;
 }
-export interface IGameViewport {
+interface IGameViewport {
   width: number;
   height: number;
   scale: number;
   translation: IViewportTranslation;
 }
-export interface IGameViewportUpdate {
+interface IGameViewportUpdate {
   width?: number;
   height?: number;
   scale?: number;
   translation?: IViewportTranslation;
 }
-
-export interface IGameColors {
-  liveCell: string;
-  deadCell: string;
-}
-
-export interface IGame {
+interface IGame {
   props: IGameProps;
   matrix: ICell[];
   matrixBuffer: ICell[];
@@ -236,7 +232,6 @@ export interface IGame {
   ctx: CanvasRenderingContext2D | null;
   generation: number;
   updateTimeout?: number;
-  colors: IGameColors;
   update(): void;
   toggleCell(index: number): void;
   draw(): void;
@@ -244,8 +239,6 @@ export interface IGame {
   swap(): void;
   setViewport(viewport: IGameViewportUpdate): void;
   setCols(cols: number): void;
-  setColors(colors: IGameColors): void;
-  onChange(cb: GameStateChangeCallback): void;
 }
 
 const calcCellWidth = (width: number, height: number, cols: number) => {
@@ -262,9 +255,7 @@ const calcScaledCellWidth = (
   return cellWidth * scale;
 };
 
-type GameChangeStateEvent = { running: boolean };
-type GameStateChangeCallback = (changes: GameChangeStateEvent) => void;
-export class Game implements IGame {
+class Game implements IGame {
   props: IGameProps;
   matrix: ICell[];
   matrixBuffer: ICell[];
@@ -275,11 +266,7 @@ export class Game implements IGame {
   updateTimeout?: number = 0;
   canvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
   clean: boolean;
-  colors: IGameColors = {
-    liveCell: Colors.Primary,
-    deadCell: Colors.DeadCell
-  };
-  _gameStateChangeCallbacks: GameStateChangeCallback[] = [];
+
   constructor(
     props: IGameProps,
     canvasRef: React.MutableRefObject<HTMLCanvasElement | null>
@@ -310,14 +297,6 @@ export class Game implements IGame {
       this.reset();
     }
   }
-  setColors = (colors: IGameColors) => {
-    this.colors = colors;
-  };
-  onChange = (cb: GameStateChangeCallback): void => {
-    if (this._gameStateChangeCallbacks.indexOf(cb) === -1) {
-      this._gameStateChangeCallbacks.push(cb);
-    }
-  };
   reset = () => {
     this.matrix = makeMatrix(this.props.cols);
     this.matrixBuffer = makeMatrix(this.props.cols);
@@ -335,32 +314,22 @@ export class Game implements IGame {
     this.clean = false;
   };
   start = () => {
-    const updateStepInterval = 100;
+    const rate = 100;
     let lastTimestamp = Date.now();
     const upd = () => {
       const currentTimestamp = Date.now();
       const diff = currentTimestamp - lastTimestamp;
       let afterTimestamp = Date.now();
-      let shouldStop = false;
-      if (diff >= updateStepInterval) {
+      if (diff >= rate) {
         this.update();
-        if (this.clean) {
-          shouldStop = true;
-          const changes = {
-            running: false
-          };
-          this._gameStateChangeCallbacks.forEach(cb => cb(changes));
-        }
         lastTimestamp = currentTimestamp;
         afterTimestamp = Date.now();
         // console.log("took", afterTimestamp - currentTimestamp);
       }
-      if (!shouldStop) {
-        this.updateTimeout = setTimeout(
-          upd,
-          updateStepInterval - (afterTimestamp - currentTimestamp)
-        );
-      }
+      this.updateTimeout = setTimeout(
+        upd,
+        rate - (afterTimestamp - currentTimestamp)
+      );
     };
     upd();
     // this.updateInterval = setInterval(this.update, 100);
@@ -410,14 +379,13 @@ export class Game implements IGame {
     height: 0,
     width: 0
   };
-  draw = (force: boolean = false) => {
-    if (!force && this.clean) {
+  draw = () => {
+    if (this.clean) {
       return;
     }
     if (!this.ctx && !this.canvasRef.current) {
       return;
     }
-
     if (!this.ctx && this.canvasRef.current) {
       this.ctx = this.canvasRef.current.getContext("2d", {
         alpha: ENABLE_CANVAS_ALPHA
@@ -474,10 +442,7 @@ export class Game implements IGame {
           const x = cell.x + cs * cols;
           const y = cell.y + rs * cols;
           // debugger;
-          const color = cell.value
-            ? this.colors.liveCell
-            : this.colors.deadCell;
-          drawPoint(this.ctx, cell, x, y, this.options, color, k);
+          drawPoint(this.ctx, cell, x, y, this.options, k);
         } else {
           debugger;
         }
@@ -499,9 +464,8 @@ type GameComponentProps = {
   height: number;
   translation: IViewportTranslation;
   scale: number;
+  running: boolean;
   onInit: Function;
-  appState: AppState;
-  onToggleCell: (index: number) => void;
 };
 function GameComponent({
   cols,
@@ -509,11 +473,18 @@ function GameComponent({
   height,
   translation,
   scale,
-  onInit,
-  onToggleCell
+  running,
+  onInit
 }: GameComponentProps) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const game = React.useMemo(() => {
+    // console.log(
+    //   "translation, scale, width, height",
+    //   translation,
+    //   scale,
+    //   width,
+    //   height
+    // );
     return new Game(
       {
         cols,
@@ -570,9 +541,8 @@ function GameComponent({
     };
   }, [game]);
 
-  const onCanvasClick = useCallback(
+  const onClick = useCallback(
     e => {
-      e.preventDefault();
       if (!game || !canvasRef.current) {
         return;
       }
@@ -587,13 +557,12 @@ function GameComponent({
         cols
       });
       game.toggleCell(cellIndex);
-      onToggleCell(cellIndex);
     },
-    [width, height, cols, scale, game, onToggleCell]
+    [width, height, cols, scale, game]
   );
   return (
     <div style={CanvasWrapperStyle}>
-      <canvas ref={canvasRef} onClick={onCanvasClick} />
+      <canvas ref={canvasRef} onClick={onClick} />
     </div>
   );
 }
@@ -611,54 +580,32 @@ const useWindowResize = () => {
   }, []);
   return [w, h];
 };
-const handleAddToHomescreenClick = () => {
-  alert(`
-      1. Open Share menu
-      2. Tap on "Add to Home Screen" button`);
-};
 
-type AppOff = 0;
-type AppOn = 1;
-type AppSleep = 2;
-type AppState = AppOn | AppOff | AppSleep;
 function App() {
   const playgroundRef = React.useRef<HTMLDivElement>(null);
   const playgroundApiRef = React.useRef<{ setScale: (scale: number) => void }>(
     null
   );
-  const [appState, setAppState] = React.useState<AppState>(0);
-  const [suspended, setSuspended] = React.useState(false);
-  const [game, setGame] = React.useState<Game>();
+  const [running, setRunning] = React.useState(false);
+  const [game, setGame] = React.useState();
   const [cols, setCols] = React.useState(80);
   const onLongTap = (e: React.SyntheticEvent) => {};
 
   const resetMap = useCallback(() => {
-    setAppState(0);
-    // playgroundApiRef.current && playgroundApiRef.current.setScale(1);
+    setRunning(false);
+    playgroundApiRef.current && playgroundApiRef.current.setScale(1);
     game && game.reset();
-  }, [game]);
-
-  useEffect(() => {
-    game &&
-      game.onChange(changes => {
-        setAppState(changes.running ? 1 : 2);
-      });
-  }, [game]);
+  }, [setRunning, game]);
 
   useEffect(() => {
     if (game) {
-      game.setColors({
-        liveCell: appState === 1 ? Colors.Primary : Colors.Secondary,
-        deadCell: Colors.DeadCell
-      });
-      if (appState === 1) {
+      if (running) {
         game.start();
       } else {
         game.stop();
       }
-      game.draw(true);
     }
-  }, [appState, game]);
+  }, [running, game]);
 
   useWindowResize();
 
@@ -667,40 +614,29 @@ function App() {
   const height =
     (playgroundRef.current && playgroundRef.current.offsetHeight) || 0;
 
+  const handleAddToHomescreenClick = () => {
+    alert(`
+        1. Open Share menu
+        2. Tap on "Add to Home Screen" button`);
+  };
+
   const onColsChange = useCallback(
     e => {
       const value = +e.target.value;
-      setAppState(0);
+      setRunning(false);
       resetMap();
       setCols(gtZero(value));
     },
-    [resetMap]
+    [setRunning, resetMap]
   );
 
   return (
     <div className="App">
-      <div
-        className="Controls"
-        style={{
-          borderColor: appState ? Colors.Danger : Colors.Secondary
-        }}
-      >
+      <div className="Controls">
         <button
           className="emoji"
           onClick={e => {
-            if (game) {
-              game.setColors({
-                liveCell: Colors.Primary,
-                deadCell: Colors.DeadCell
-              });
-              game.update();
-              game.draw(true);
-              game.setColors({
-                liveCell: Colors.Secondary,
-                deadCell: Colors.DeadCell
-              });
-            }
-
+            game.update();
             e && e.stopPropagation && e.stopPropagation();
             e && e.preventDefault && e.preventDefault();
           }}
@@ -710,15 +646,15 @@ function App() {
         <button
           className="emoji"
           style={{
-            backgroundColor: appState ? colors.stopBtn : colors.startBtn
+            backgroundColor: running ? colors.stopBtn : colors.startBtn
           }}
           onClick={e => {
-            setAppState(appState === 0 ? 1 : 0);
+            setRunning(!running);
             e && e.stopPropagation && e.stopPropagation();
             e && e.preventDefault && e.preventDefault();
           }}
         >
-          {appState ? messages.stopBtn : messages.startBtn}
+          {running ? messages.stopBtn : messages.startBtn}
         </button>
         <button
           className="emoji"
@@ -747,7 +683,7 @@ function App() {
           <select value={cols} onChange={onColsChange}>
             {[10, 20, 40, 80, 100, 120, 160].map(v => (
               <option key={v} value={v}>
-                {v}
+                {v}x{v}
               </option>
             ))}
           </select>
@@ -787,17 +723,12 @@ function App() {
             return (
               <GameComponent
                 onInit={setGame}
+                running={running}
                 cols={cols}
                 scale={scale}
                 translation={translation}
                 width={width}
                 height={height}
-                appState={appState}
-                onToggleCell={() => {
-                  if (appState === 2) {
-                    setAppState(1);
-                  }
-                }}
               />
             );
           }}

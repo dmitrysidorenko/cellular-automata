@@ -18,7 +18,7 @@ const translationShape = PropTypes.shape({
 
 function isDescendant(parent, child) {
   var node = child.parentNode;
-  while (node != null) {
+  while (node !== null) {
     if (node === parent) {
       return true;
     }
@@ -27,6 +27,19 @@ function isDescendant(parent, child) {
   return false;
 }
 
+type Pointer = any;
+
+const getDesiredScale = (defaultScale: number, scale: number) => {
+  let desiredScale;
+  if (scale !== undefined) {
+    desiredScale = scale;
+  } else if (defaultScale !== undefined) {
+    desiredScale = defaultScale;
+  } else {
+    desiredScale = 1;
+  }
+  return desiredScale;
+};
 /*
   This contains logic for providing a map-like interaction to any DOM node.
   It allows a user to pinch, zoom, translate, etc, as they would an interactive map.
@@ -34,47 +47,53 @@ function isDescendant(parent, child) {
   or translating on its own. This works on both desktop, and mobile.
 */
 class MapInteraction extends Component {
-  static get propTypes() {
-    return {
-      children: PropTypes.func,
-      scale: PropTypes.number,
-      translation: translationShape,
-      defaultScale: PropTypes.number,
-      defaultTranslation: translationShape,
-      disableZoom: PropTypes.bool,
-      disablePan: PropTypes.bool,
-      onChange: PropTypes.func,
-      onLongTap: PropTypes.func,
-      translationBounds: PropTypes.shape({
-        xMin: PropTypes.number,
-        xMax: PropTypes.number,
-        yMin: PropTypes.number,
-        yMax: PropTypes.number
-      }),
-      minScale: PropTypes.number,
-      maxScale: PropTypes.number,
-      showControls: PropTypes.bool,
-      plusBtnContents: PropTypes.node,
-      minusBtnContents: PropTypes.node,
-      btnClass: PropTypes.string,
-      plusBtnClass: PropTypes.string,
-      minusBtnClass: PropTypes.string,
-      controlsClass: PropTypes.string
-    };
-  }
+  static propTypes = {
+    children: PropTypes.func,
+    scale: PropTypes.number,
+    translation: translationShape,
+    defaultScale: PropTypes.number,
+    defaultTranslation: translationShape,
+    disableZoom: PropTypes.bool,
+    disablePan: PropTypes.bool,
+    onChange: PropTypes.func,
+    onLongTap: PropTypes.func,
+    translationBounds: PropTypes.shape({
+      xMin: PropTypes.number,
+      xMax: PropTypes.number,
+      yMin: PropTypes.number,
+      yMax: PropTypes.number
+    }),
+    minScale: PropTypes.number,
+    maxScale: PropTypes.number,
+    showControls: PropTypes.bool,
+    plusBtnContents: PropTypes.node,
+    minusBtnContents: PropTypes.node,
+    btnClass: PropTypes.string,
+    plusBtnClass: PropTypes.string,
+    minusBtnClass: PropTypes.string,
+    controlsClass: PropTypes.string
+  };
 
-  static get defaultProps() {
-    return {
-      minScale: 0.05,
-      maxScale: 3,
-      showControls: false,
-      translationBounds: {},
-      disableZoom: false,
-      disablePan: false,
-      longtapMinDuration: 1000,
-      longtapMaxDuration: 3000
-    };
-  }
+  static defaultProps = {
+    minScale: 0.05,
+    maxScale: 3,
+    showControls: false,
+    translationBounds: {},
+    disableZoom: false,
+    disablePan: false,
+    longtapMinDuration: 1000,
+    longtapMaxDuration: 3000
+  };
+
+  startPointerInfo?: {
+    timestamp: number;
+    pointers: Pointer[];
+    scale: number;
+    translation: object;
+  };
+
+  containerNodeRef = React.createRef<HTMLElement>();
+  containerNode: HTMLElement | null = null;
 
   constructor(props) {
     super(props);
@@ -87,14 +106,7 @@ class MapInteraction extends Component {
       maxScale
     } = props;
 
-    let desiredScale;
-    if (scale != undefined) {
-      desiredScale = scale;
-    } else if (defaultScale != undefined) {
-      desiredScale = defaultScale;
-    } else {
-      desiredScale = 1;
-    }
+    const desiredScale = getDesiredScale(defaultScale, scale);
 
     this.state = {
       scale: clamp(minScale, desiredScale, maxScale),
@@ -103,20 +115,10 @@ class MapInteraction extends Component {
     };
 
     this.startPointerInfo = undefined;
-
-    this.onMouseDown = this.onMouseDown.bind(this);
-    this.onTouchDown = this.onTouchDown.bind(this);
-
-    this.onMouseMove = this.onMouseMove.bind(this);
-    this.onTouchMove = this.onTouchMove.bind(this);
-
-    this.onMouseUp = this.onMouseUp.bind(this);
-    this.onTouchEnd = this.onTouchEnd.bind(this);
-
-    this.onWheel = this.onWheel.bind(this);
   }
 
   componentDidMount() {
+    this.containerNode = this.containerNodeRef.current;
     const passiveOption = makePassiveEventOption(false);
 
     this.containerNode.addEventListener("wheel", this.onWheel, passiveOption);
@@ -161,14 +163,14 @@ class MapInteraction extends Component {
 
   componentWillReceiveProps(newProps) {
     const scale =
-      newProps.scale != undefined ? newProps.scale : this.state.scale;
+      newProps.scale !== undefined ? newProps.scale : this.state.scale;
     const translation = newProps.translation || this.state.translation;
 
     // if parent has overridden state then abort current user interaction
     if (
-      translation.x != this.state.translation.x ||
-      translation.y != this.state.translation.y ||
-      scale != this.state.scale
+      translation.x !== this.state.translation.x ||
+      translation.y !== this.state.translation.y ||
+      scale !== this.state.scale
     ) {
       this.setPointerState();
     }
@@ -193,13 +195,13 @@ class MapInteraction extends Component {
     window.removeEventListener("mouseup", this.onMouseUp);
   }
 
-  updateParent() {
+  updateParent = () => {
     if (!this.props.onChange) {
       return;
     }
     const { scale, translation } = this.state;
     this.props.onChange({ scale, translation });
-  }
+  };
 
   /*
     Event handlers
@@ -213,17 +215,17 @@ class MapInteraction extends Component {
     https://developer.mozilla.org/en-US/docs/Web/API/Touch_events/Supporting_both_TouchEvent_and_MouseEvent
   */
 
-  onMouseDown(e) {
+  onMouseDown = e => {
     // console.log("onMouseDown", e);
     // e.preventDefault();
     this.setPointerState([e]);
-  }
+  };
 
-  onTouchDown(e) {
+  onTouchDown = e => {
     // console.log("onTouchDown", e);
     // e.preventDefault();
     this.setPointerState(e.touches);
-  }
+  };
 
   onMouseUp = e => {
     const isDesc = isDescendant(this.containerNode, e.target);
@@ -243,15 +245,15 @@ class MapInteraction extends Component {
     this.setPointerState(e.touches);
   };
 
-  onMouseMove(e) {
+  onMouseMove = e => {
     if (!this.startPointerInfo || this.props.disablePan) {
       return;
     }
     e.preventDefault();
     this.onDrag(e);
-  }
+  };
 
-  onTouchMove(e) {
+  onTouchMove = (e: React.TouchEvent) => {
     if (!this.startPointerInfo) {
       return;
     }
@@ -261,16 +263,16 @@ class MapInteraction extends Component {
     const { disablePan, disableZoom } = this.props;
 
     const isPinchAction =
-      e.touches.length == 2 && this.startPointerInfo.pointers.length > 1;
+      e.touches.length === 2 && this.startPointerInfo.pointers.length > 1;
     if (isPinchAction && !disableZoom) {
       this.scaleFromMultiTouch(e);
     } else if (e.touches.length === 1 && this.startPointerInfo && !disablePan) {
       this.onDrag(e.touches[0]);
     }
-  }
+  };
 
   // handles both touch and mouse drags
-  onDrag(pointer) {
+  onDrag = pointer => {
     const { translation, pointers } = this.startPointerInfo;
     const startPointer = pointers[0];
     const dragX = pointer.clientX - startPointer.clientX;
@@ -287,9 +289,9 @@ class MapInteraction extends Component {
       },
       () => this.updateParent()
     );
-  }
+  };
 
-  onWheel(e) {
+  onWheel = e => {
     if (this.props.disableZoom) {
       return;
     }
@@ -311,9 +313,9 @@ class MapInteraction extends Component {
     });
 
     this.scaleFromPoint(newScale, mousePos);
-  }
+  };
 
-  setPointerState(pointers) {
+  setPointerState = (pointers?: Pointer[]) => {
     if (!pointers || pointers.length === 0) {
       this.startPointerInfo = undefined;
       return;
@@ -325,41 +327,44 @@ class MapInteraction extends Component {
       scale: this.state.scale,
       translation: this.state.translation
     };
-  }
+  };
 
-  clampTranslation(desiredTranslation, props = this.props) {
+  clampTranslation = (desiredTranslation, props = this.props) => {
     const { x, y } = desiredTranslation;
     let { xMax, xMin, yMax, yMin } = props.translationBounds;
-    xMin = xMin != undefined ? xMin : -Infinity;
-    yMin = yMin != undefined ? yMin : -Infinity;
-    xMax = xMax != undefined ? xMax : Infinity;
-    yMax = yMax != undefined ? yMax : Infinity;
+    xMin = xMin !== undefined ? xMin : -Infinity;
+    yMin = yMin !== undefined ? yMin : -Infinity;
+    xMax = xMax !== undefined ? xMax : Infinity;
+    yMax = yMax !== undefined ? yMax : Infinity;
 
     return {
       x: clamp(xMin, x, xMax),
       y: clamp(yMin, y, yMax)
     };
-  }
+  };
 
-  translatedOrigin(translation = this.state.translation) {
+  translatedOrigin = (translation = this.state.translation) => {
     const clientOffset = this.containerNode.getBoundingClientRect();
     return {
       x: clientOffset.left + translation.x,
       y: clientOffset.top + translation.y
     };
-  }
+  };
 
-  clientPosToTranslatedPos({ x, y }, translation = this.state.translation) {
+  clientPosToTranslatedPos = (
+    { x, y },
+    translation = this.state.translation
+  ) => {
     const origin = this.translatedOrigin(translation);
     return {
       x: x - origin.x,
       y: y - origin.y
     };
-  }
+  };
 
-  scaleFromPoint(newScale, focalPt) {
+  scaleFromPoint = (newScale, focalPt) => {
     const { translation, scale } = this.state;
-    const scaleRatio = newScale / (scale != 0 ? scale : 1);
+    const scaleRatio = newScale / (scale !== 0 ? scale : 1);
 
     const focalPtDelta = {
       x: coordChange(focalPt.x, scaleRatio),
@@ -378,9 +383,9 @@ class MapInteraction extends Component {
       },
       () => this.updateParent()
     );
-  }
+  };
 
-  scaleFromMultiTouch(e) {
+  scaleFromMultiTouch = e => {
     const startTouches = this.startPointerInfo.pointers;
     const newTouches = e.touches;
 
@@ -435,15 +440,15 @@ class MapInteraction extends Component {
       },
       () => this.updateParent()
     );
-  }
+  };
 
-  discreteScaleStepSize() {
+  discreteScaleStepSize = () => {
     const { minScale, maxScale } = this.props;
     const delta = Math.abs(maxScale - minScale);
     return delta / 10;
-  }
+  };
 
-  changeScale(delta) {
+  changeScale = delta => {
     const targetScale = this.state.scale + delta;
     const { minScale, maxScale } = this.props;
     const scale = clamp(minScale, targetScale, maxScale);
@@ -454,7 +459,7 @@ class MapInteraction extends Component {
 
     const focalPoint = this.clientPosToTranslatedPos({ x, y });
     this.scaleFromPoint(scale, focalPoint);
-  }
+  };
 
   maybeLongTap = e => {
     if (this.props.onLongTap && this.startPointerInfo) {
@@ -488,7 +493,7 @@ class MapInteraction extends Component {
     }
   };
 
-  renderControls() {
+  renderControls = () => {
     const step = this.discreteScaleStepSize();
     return (
       <Controls
@@ -506,7 +511,7 @@ class MapInteraction extends Component {
         disableZoom={this.props.disableZoom}
       />
     );
-  }
+  };
 
   render() {
     const { showControls, children } = this.props;
@@ -526,9 +531,7 @@ class MapInteraction extends Component {
     // console.dir(this.containerNode);
     return (
       <div
-        ref={node => {
-          this.containerNode = node;
-        }}
+        ref={containerNodeRef}
         style={{
           height: "100%",
           width: "100%",

@@ -1,0 +1,21 @@
+.game-controls {
+  width: 100%;
+  height: 128px;
+  position: absolute;
+  bottom: 0;
+  flex-grow: 0;
+  flex-shrink: 0;
+  overflow: auto;
+  background: var(--Background, #000000);
+  border-radius: 16px 16px 0 0;
+  border-style: solid;
+  border-color: var(--Primary, #ffd500);
+  border-top-width: 2px;
+  border-bottom-width: 0px;
+  border-left-width: 0px;
+  border-right-width: 0px;
+}
+
+.game-controls-danger {
+  border-color: var(--Danger, #ff0048);
+}

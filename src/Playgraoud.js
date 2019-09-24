@@ -6,7 +6,7 @@ import { MapInteraction } from "./lib/react-map-interaction";
 export class Playground extends Component {
   constructor(props) {
     super(props);
-    const { width, height } = props;
+    const { width, height, refApi } = props;
     let startX = 0;
     let startY = 0;
     if (width > 0 && height > 0) {
@@ -23,6 +23,14 @@ export class Playground extends Component {
     this.state = {
       scale: 1,
       translation: { x: startX, y: startY }
+    };
+  }
+
+  componentDidMount() {
+    this.props.refApi.current = {
+      setScale: scale => {
+        this.setState({ scale });
+      }
     };
   }
 

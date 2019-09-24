@@ -1,0 +1,12 @@
+.game-cell {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+  background: var(--CellDead, #242424);
+  border-radius: 2px;
+  border: 1px solid var(--Background, #000000);
+}
+
+.game-cell-alive {
+  background: var(--Primary, yellow);
+}

@@ -1,10 +1,20 @@
+:root {
+  --Background: #000000;
+  --Border: #ffffff;
+  --Text: #ffffff;
+  --Primary: #ffd500;
+  --Danger: #ff0048;
+  --CellDead: #242424;
+}
+
 html,
 body,
 #root,
 .App {
   height: 100%;
   margin: 0;
-  background: #1d1c1c;
+  /* background: #1d1c1c; */
+  background: var(--Background);
   color: rgb(182, 182, 182);
 }
 
@@ -16,7 +26,7 @@ body,
   font-family: sans-serif;
   text-align: center;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
 }
 
 .rules {
@@ -29,27 +39,47 @@ body,
 }
 
 .Controls {
-  padding: 10px;
+  padding: 15px 10px 25px 10px;
   top: 0px;
   width: 100%;
   flex-grow: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  border-top: 2px solid #171616;
 }
 .Controls button {
   font-size: 16px;
-  padding: 5px 10px;
+  padding: 5px;
   color: #dadada;
   border-color: rgb(182, 182, 182);
   background: black;
-  /* height: 50px; */
-  border-radius: 14px;
-  margin-right: 6px;
+  border-radius: 8px;
+  margin: 3px;
 }
 .Controls label {
-  display: inline-block;
   font-size: 16px;
   white-space: nowrap;
   padding: 10px;
   z-index: 9;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.Controls label > select {
+  height: 38px;
+  display: block;
+  font-size: 28px;
+  background: transparent;
+  color: white;
+}
+.Controls label > input {
+  width: 140px;
+}
+.Controls label > div {
+  width: 60px;
 }
 
 .Playground {
@@ -66,4 +96,14 @@ body,
   -ms-user-select: none; /* Internet Explorer/Edge */
   user-select: none; /* Non-prefixed version, currently
                                   supported by Chrome and Opera */
+}
+
+button.emoji {
+  color: #dadada;
+  border-color: rgb(182, 182, 182);
+  margin: 8px;
+  background: none;
+  border: none;
+  font-size: 38px;
+  line-height: 38px;
 }
