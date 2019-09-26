@@ -5,6 +5,7 @@ import * as ca from "./ca";
 import { relMouseCoords } from "./utils";
 import { Playground } from "./Playgraoud";
 import { Colors } from "./design/palette";
+import PlayButtonGif from "./components/Buttons/PlayButtonGif";
 import "./styles.css";
 
 window["Colors"] = Colors;
@@ -740,7 +741,16 @@ function App() {
         >
           {messages.runOneStep}
         </button>
-        <button
+        <PlayButtonGif
+          running={appState === 1}
+          suspend={appState === 2}
+          onClick={e => {
+            setAppState(appState === 0 ? 1 : 0);
+            e && e.stopPropagation && e.stopPropagation();
+            e && e.preventDefault && e.preventDefault();
+          }}
+        />
+        {/* <button
           className="emoji"
           style={{
             backgroundColor: appState ? colors.stopBtn : colors.startBtn
@@ -752,7 +762,7 @@ function App() {
           }}
         >
           {appState ? messages.stopBtn : messages.startBtn}
-        </button>
+        </button> */}
         <button
           className="emoji"
           onClick={e => {
