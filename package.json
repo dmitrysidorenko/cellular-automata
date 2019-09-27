@@ -20,7 +20,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "generate:ssl": "openssl req -nodes -new -x509 -keyout ./ssl/server.key -out ./ssl/server.cert",
-    "serve": "serve --ssl-cert ./ssl/server.cert --ssl-key ./ssl/server.key -s ./build"
+    "serve": "serve --ssl-cert ./ssl/server.cert --ssl-key ./ssl/server.key -s ./build",
+    "generate:icons": "npx pwa-asset-generator ./public/images/icons/Logo@2x.png ./public/images/generated-icons -b \"#000000\" -m ./public/manifest.json --path \"%PUBLIC_URL%\" -i ./public/index.html "
   },
   "eslintConfig": {
     "extends": "react-app"
