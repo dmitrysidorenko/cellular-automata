@@ -1,11 +1,8 @@
 import React, { ReactElement, SyntheticEvent } from "react";
-import { addPropertyControls, ControlType } from "framer";
 import "./IconButton.css";
 
-// Open Preview: Command + P
-// Learn more: https://framer.com/api
 
-type Props = {
+export type IconButtonProps = {
   icon: React.ReactNode;
   tint: string;
   borderColor: string;
@@ -14,7 +11,7 @@ type Props = {
   height?: number;
   radius?: number;
 };
-export function IconButton(props: Props): ReactElement {
+export function IconButton(props: IconButtonProps): ReactElement {
   const {
     icon,
     tint,
@@ -62,20 +59,3 @@ IconButton.defaultProps = {
   radius: 12
 };
 
-// Learn more: https://framer.com/api/property-controls/
-addPropertyControls(IconButton, {
-  icon: {
-    title: "Icon",
-    type: ControlType.ComponentInstance
-  },
-  tint: {
-    title: "Tint",
-    type: ControlType.Color,
-    defaultValue: "#000000"
-  },
-  borderColor: {
-    title: "BorderColor",
-    type: ControlType.Color,
-    defaultValue: "#ffffff"
-  }
-});

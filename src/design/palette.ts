@@ -1,4 +1,4 @@
-type Colors = {
+export type Colors = {
   Background: string;
   Border: string;
   Text: string;

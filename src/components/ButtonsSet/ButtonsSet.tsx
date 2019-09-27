@@ -1,11 +1,7 @@
 import * as React from "react";
-import { addPropertyControls, ControlType, StackProperties } from "framer";
 import "./ButtonsSet.css";
 
-// Open Preview: Command + P
-// Learn more: https://framer.com/api
-type Props = Partial<StackProperties>;
-export function ButtonsSet(props: Props) {
+export function ButtonsSet(props: any) {
   const { children, ...rest } = props;
   return (
     <div {...rest} className="buttons-set">
@@ -13,13 +9,3 @@ export function ButtonsSet(props: Props) {
     </div>
   );
 }
-
-addPropertyControls(ButtonsSet, {
-  children: {
-    type: ControlType.Array,
-    propertyControl: {
-      type: ControlType.ComponentInstance
-    },
-    maxCount: 5
-  }
-});

@@ -6,7 +6,7 @@ import { clamp, midpoint, touchPt, touchDistance } from "./geometry";
 import makePassiveEventOption from "./makePassiveEventOption";
 
 // The amount that a value of a dimension will change given a new scale
-const coordChange = (coordinate, scaleRatio) => {
+const coordChange = (coordinate: number, scaleRatio: number) => {
   return scaleRatio * coordinate - coordinate;
 };
 
@@ -166,7 +166,7 @@ class MapInteraction extends Component<
     window.addEventListener("mouseup", this.onMouseUp, touchAndMouseEndOptions);
   }
 
-  componentWillReceiveProps(newProps: MapInteractionProps) {
+  UNSAFE_componentWillReceiveProps(newProps: MapInteractionProps) {
     const scale =
       newProps.scale !== undefined ? newProps.scale : this.state.scale;
     const translation = newProps.translation || this.state.translation;
@@ -288,7 +288,7 @@ class MapInteraction extends Component<
     );
   };
 
-  onWheel = e => {
+  onWheel = (e: any) => {
     if (this.props.disableZoom) {
       return;
     }
@@ -392,7 +392,7 @@ class MapInteraction extends Component<
     );
   };
 
-  scaleFromMultiTouch = e => {
+  scaleFromMultiTouch = (e: any) => {
     const startTouches = this.startPointerInfo.pointers;
     const newTouches = e.touches;
 
@@ -455,7 +455,7 @@ class MapInteraction extends Component<
     return delta / 10;
   };
 
-  changeScale = delta => {
+  changeScale = (delta: number) => {
     if (this.containerNode) {
       const targetScale = this.state.scale + delta;
       const { minScale, maxScale } = this.props;
@@ -530,7 +530,7 @@ class MapInteraction extends Component<
     );
   }
 }
-const getOffsetHeight = (el: HTMLElement) => (el && el.clientHeight) || 0;
-const getOffsetWidth = (el: HTMLElement) => (el && el.offsetWidth) || 0;
+// const getOffsetHeight = (el: HTMLElement) => (el && el.clientHeight) || 0;
+// const getOffsetWidth = (el: HTMLElement) => (el && el.offsetWidth) || 0;
 
 export default MapInteraction;

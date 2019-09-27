@@ -1,0 +1,62 @@
+.PlasticButton {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  animation: transform 300ms ease;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  flex-grow: 0;
+  padding: 0;
+  outline: none;
+  font-size: 15px;
+  font-weight: 300;
+  background-color: var(--Background);
+  border: 1px solid var(--Background);
+  box-shadow: 0px 0px 0px 1px var(--Text);
+  color: var(--Text);
+  text-shadow: none;
+}
+
+.PlasticButton.small {
+  width: 32px;
+  height: 32px;
+}
+
+.PlasticButton.regular {
+  width: 38px;
+  height: 38px;
+  font-weight: 300;
+}
+
+.PlasticButton.medium {
+  width: 48px;
+  height: 48px;
+  font-weight: 700;
+}
+
+.PlasticButton.large {
+  width: 64px;
+  height: 64px;
+  font-weight: 700;
+}
+
+.PlasticButton.primary {
+  background-color: var(--Primary);
+  color: var(--Background);
+  text-shadow: 0px 1px 0px var(--Text);
+}
+.PlasticButton.danger {
+  background-color: var(--Danger);
+  color: var(--Text);
+  text-shadow: 0px 1px 0px var(--Background);
+}
+.PlasticButton.secondary {
+  background-color: var(--Secondary);
+  color: var(--Text);
+  text-shadow: 0px 1px 0px var(--Background);
+}
+.PlasticButton:active {
+  transform: scale(0.95);
+}

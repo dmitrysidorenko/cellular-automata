@@ -1,27 +1,3 @@
-:root {
-  --Background: #000000;
-  --Border: #ffffff;
-  --Text: #ffffff;
-  --Primary: #ffd500;
-  --Danger: #ff0048;
-  --CellDead: #242424;
-}
-
-html,
-body,
-#root,
-.App {
-  height: 100%;
-  margin: 0;
-  /* background: #1d1c1c; */
-  background: var(--Background);
-  color: rgb(182, 182, 182);
-}
-
-* {
-  box-sizing: border-box;
-}
-
 .App {
   font-family: sans-serif;
   text-align: center;
@@ -39,17 +15,43 @@ body,
 }
 
 .Controls {
-  padding: 15px 10px 25px 10px;
   top: 0px;
   width: 100%;
   flex-grow: 0;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
   border-top: 2px solid #171616;
+  will-change: height;
+  transition: height 300ms ease;
+  height: 94px;
+  overflow: hidden;
 }
-.Controls button {
+.Controls.expand {
+  height: 200px;
+}
+
+.Controls > .buttons {
+  width: 100%;
+  padding: 15px 0;
+}
+.Controls > .extra {
+  width: 100%;
+  padding: 15px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+}
+
+.Controls > .buttons > * + * {
+  margin-left: 16px;
+}
+
+.Controls button.emoji,
+.Controls button.emoji {
   font-size: 16px;
   padding: 5px;
   color: #dadada;
@@ -90,15 +92,13 @@ body,
 
 .noselect {
   -webkit-touch-callout: none; /* iOS Safari */
-  -webkit-user-select: none; /* Safari */
-  -khtml-user-select: none; /* Konqueror HTML */
-  -moz-user-select: none; /* Firefox */
-  -ms-user-select: none; /* Internet Explorer/Edge */
+  -webkit-user-select: none; /* Safari */ /* Konqueror HTML */
+  -moz-user-select: none; /* Firefox */ /* Internet Explorer/Edge */
   user-select: none; /* Non-prefixed version, currently
                                   supported by Chrome and Opera */
 }
 
-button.emoji {
+.Controls button.emoji {
   color: #dadada;
   border-color: rgb(182, 182, 182);
   margin: 8px;
@@ -106,4 +106,36 @@ button.emoji {
   border: none;
   font-size: 38px;
   line-height: 38px;
+}
+
+.grid-size-buttons {
+  display: flex;
+  justify-content: flex-start;
+  padding-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.grid-size-buttons > .PlasticButton {
+  border-radius: 0;
+}
+
+.grid-size-buttons > .PlasticButton:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.grid-size-buttons > .PlasticButton:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.update-block {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.update-block--text {
+  display: inline-block;
+  margin-right: 8px;
 }

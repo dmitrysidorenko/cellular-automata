@@ -1,0 +1,59 @@
+:root {
+  --frames-all: url("/images/play-button-frames/play_frames@0.5x.png");
+  --frames-all-s: url("/images/play-button-frames/play_frames_still@0.5x.png");
+}
+
+.play-button-gif {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  animation: transform 300ms ease;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  flex-grow: 0;
+  padding: 0;
+  outline-color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  background-color: var(--Primary);
+  border: 1px solid #000000;
+  box-shadow: 0px 0px 0px 1px #fff;
+  color: #000000;
+  text-shadow: 0px 1px 0px #ffffff;
+}
+.play-button-gif.play {
+  background-color: var(--Danger);
+  color: #fff;
+  text-shadow: 0px 1px 0px #000;
+}
+.play-button-gif.suspend {
+  background-color: var(--Secondary);
+  color: #fff;
+  text-shadow: 0px 1px 0px #000;
+}
+
+.play-button-gif > .icon[data-cold="true"][data-play="false"] {
+  background-image: var(--frames-all-s);
+}
+
+.play-button-gif > .icon {
+  width: 50px;
+  height: 50px;
+  /* background-position: center; */
+  background-color: #000;
+  background-size: cover;
+  background-image: var(--frames-all);
+  /* background-position: 0; */
+  will-change: transform;
+  outline-color: rgb(37, 37, 37);
+  cursor: pointer;
+  display: inline-block;
+  border-radius: 8px;
+  clip: rect(0, 0, 0, 0);
+  will-change: background-position;
+}
+.play-button-gif:active {
+  transform: scale(0.95);
+}
