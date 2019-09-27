@@ -1,12 +1,10 @@
 import React, { Component } from "react";
 import { MapInteraction } from "./lib/react-map-interaction";
 
-// If you want to have control over the scale and translation,
-// then use the `scale`, `translation`, and `onChange` props.
 export class Playground extends Component {
   constructor(props) {
     super(props);
-    const { width, height, refApi } = props;
+    const { width, height } = props;
     let startX = 0;
     let startY = 0;
     if (width > 0 && height > 0) {
@@ -56,26 +54,12 @@ export class Playground extends Component {
   render() {
     const { children, width, height, ...rest } = this.props;
     const { scale, translation } = this.state;
-    const halfWidth = width / 2;
-    const halfHeight = height / 2;
-    const halfMin = Math.min(height, width) / 2;
-    // console.log("scale, height, width, nw, nh", scale, height, width, nw, nh);
-    // console.log("translation", translation, width, height, { scale, nw, nh });
-    // console.log("tr", translation);
     return (
       <MapInteraction
-        // onLongTap={this.props.onLongTap}
         scale={scale}
         translation={translation}
         minScale={1}
         maxScale={10}
-        // translationBounds={{
-        //   xMin: -1 * (scale * halfMin),
-        //   xMax: width - scale * halfMin,
-        //   yMin: -1 * (scale * halfMin),
-        //   yMax: height - scale * halfMin
-        // }}
-        // disablePan
         onChange={({ scale, translation: { x, y } }) => {
           this.setState({
             scale,
@@ -85,10 +69,9 @@ export class Playground extends Component {
         {...rest}
       >
         {() => {
-          // console.log("scale:", scale);
           return children({
             scale,
-            translation //: { x: translation.x % width, y: translation.y % height }
+            translation
           });
         }}
       </MapInteraction>

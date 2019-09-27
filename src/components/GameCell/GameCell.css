@@ -8,5 +8,5 @@
 }
 
 .game-cell-alive {
-  background: var(--Primary, yellow);
+  background: var(--Primary, #ffc107);
 }

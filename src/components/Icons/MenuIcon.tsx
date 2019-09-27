@@ -1,34 +1,11 @@
-import * as React from "react";
+import * as React from "react"
 
 export function MenuIcon() {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="20"
-      height="20"
-      style={{ transform: "rotate(90deg)" }}
-    >
-      <path
-        d="M 2 18 L 2 2"
-        fill="transparent"
-        strokeWidth="4"
-        stroke="rgb(255, 255, 255)"
-        strokeLinecap="round"
-      />
-      <path
-        d="M 18 18 L 18 2"
-        fill="transparent"
-        strokeWidth="4"
-        stroke="rgb(255, 255, 255)"
-        strokeLinecap="round"
-      />
-      <path
-        d="M 10 18 L 10 2"
-        fill="transparent"
-        strokeWidth="4"
-        stroke="rgb(255, 255, 255)"
-        strokeLinecap="round"
-      />
+    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30">
+      <path d="M 6 8 L 24 8" fill="transparent" strokeWidth="3" stroke="rgb(255, 255, 255)" strokeLinecap="round"></path>
+      <path d="M 6 15 L 24 15" fill="transparent" strokeWidth="3" stroke="rgb(255, 255, 255)" strokeLinecap="round"></path>
+      <path d="M 6 22 L 24 22" fill="transparent" strokeWidth="3" stroke="rgb(255, 255, 255)" strokeLinecap="round"></path>
     </svg>
-  );
+  )
 }

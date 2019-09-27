@@ -4,8 +4,8 @@
 }
 
 .play-button-gif {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 6px;
   animation: transform 300ms ease;
   display: inline-flex;
@@ -14,8 +14,26 @@
   flex-shrink: 0;
   flex-grow: 0;
   padding: 0;
-  outline-color: gray;
+  outline-color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  background-color: var(--Primary);
+  border: 1px solid #000000;
+  box-shadow: 0px 0px 0px 1px #fff;
+  color: #000000;
+  text-shadow: 0px 1px 0px #ffffff;
 }
+.play-button-gif.play {
+  background-color: var(--Danger);
+  color: #fff;
+  text-shadow: 0px 1px 0px #000;
+}
+.play-button-gif.suspend {
+  background-color: var(--Secondary);
+  color: #fff;
+  text-shadow: 0px 1px 0px #000;
+}
+
 .play-button-gif > .icon[data-cold="true"][data-play="false"] {
   background-image: var(--frames-all-s);
 }

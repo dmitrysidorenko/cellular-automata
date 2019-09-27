@@ -1,31 +1,10 @@
-import * as React from "react";
+import * as React from "react"
 
 export function CleanIcon() {
   return (
-    <div
-      style={{
-        width: 20,
-        height: 20
-      }}
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">
-        <path
-          d="M 0 0.279 C 19.206 0.024 21 0 21 0"
-          transform="translate(-0.917 9.63) rotate(45 10.5 0.5)"
-          fill="transparent"
-          strokeWidth="4"
-          stroke="rgb(255, 255, 255)"
-          strokeLinecap="round"
-        />
-        <path
-          d="M 0.279 0 C 0.024 19.206 0 21 0 21"
-          transform="translate(9 0) rotate(45 0.5 10.5)"
-          fill="transparent"
-          strokeWidth="4"
-          stroke="rgb(255, 255, 255)"
-          strokeLinecap="round"
-        />
-      </svg>
-    </div>
-  );
+    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30">
+      <path d="M 0 0.302 C 21.646 0.026 23.668 0 23.668 0" transform="translate(2.738 14.72) rotate(45 11.834 0.5)" fill="transparent" strokeWidth="3" stroke="currentColor" strokeLinecap="round"></path>
+      <path d="M 0 0.264 C 21.646 0.023 23.667 0 23.667 0" transform="translate(2.474 14.491) rotate(135 11.834 0.5)" fill="transparent" strokeWidth="3" stroke="currentColor" strokeLinecap="round"></path>
+    </svg>
+  )
 }

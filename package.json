@@ -1,29 +1,43 @@
 {
-  "name": "cellular-automata",
-  "version": "1.0.0",
-  "description": "",
-  "keywords": [],
-  "main": "src/index.js",
+  "name": "cellular-automata-v2",
+  "version": "0.1.0",
+  "private": true,
   "dependencies": {
-    "@types/ramda": "0.26.21",
-    "@types/react": "16.9.2",
-    "@types/react-dom": "16.9.0",
-    "framer": "1.1.3",
-    "ramda": "0.26.1",
-    "react": "16.8.6",
-    "react-add-to-homescreen": "1.1.0",
-    "react-dom": "16.8.6",
-    "react-map-interaction": "1.3.1",
-    "react-scripts": "3.0.1"
-  },
-  "devDependencies": {
-    "typescript": "3.3.3"
+    "@types/jest": "^24.0.18",
+    "@types/node": "^12.7.8",
+    "@types/ramda": "^0.26.25",
+    "@types/react": "^16.9.3",
+    "@types/react-dom": "^16.9.1",
+    "react": "^16.9.0",
+    "react-add-to-homescreen": "^1.1.0",
+    "react-dom": "^16.9.0",
+    "react-scripts": "3.1.2",
+    "typescript": "^3.6.3"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "generate:ssl": "openssl req -nodes -new -x509 -keyout ./ssl/server.key -out ./ssl/server.cert",
+    "serve": "serve --ssl-cert ./ssl/server.cert --ssl-key ./ssl/server.key -s ./build"
   },
-  "browserslist": [">0.2%", "not dead", "not ie <= 11", "not op_mini all"]
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "eslint-plugin-react-hooks": "^2.0.1"
+  }
 }

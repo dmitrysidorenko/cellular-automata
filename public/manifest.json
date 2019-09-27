@@ -1,12 +1,6 @@
 {
-  "name": "Cellulara",
   "short_name": "Cellulara",
-  "theme_color": "#1d1c1c",
-  "background_color": "#1d1c1c",
-  "display": "standalone",
-  "orientation": "portrait",
-  "Scope": "/",
-  "start_url": "/",
+  "name": "Cellulara",
   "icons": [
     {
       "src": "images/icons/icon-72x72.png",
@@ -49,5 +43,11 @@
       "type": "image/png"
     }
   ],
-  "splash_pages": null
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#000",
+  "background_color": "#000",
+  "prefer_related_applications": false
 }
