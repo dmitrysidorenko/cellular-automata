@@ -37,7 +37,7 @@ type MapInteractionProps = {
   children: (props: {
     scale: number;
     translation: Translation;
-  }) => React.ReactElement;
+  }) => React.ReactElement | React.ReactChildren | React.ReactNode;
   scale: number;
   translation: Translation;
   defaultScale: number;
@@ -82,14 +82,14 @@ const getInitialState = (props: MapInteractionProps): MapInteractionState => {
     maxScale,
     defaultScale,
     translation,
-    defaultTranslation
+    defaultTranslation,
   } = props;
   const desiredScale = getDesiredScale(defaultScale, scale);
 
   return {
     scale: clamp(minScale, desiredScale, maxScale),
     translation: translation || defaultTranslation || { x: 0, y: 0 },
-    disallowChildClicks: false
+    disallowChildClicks: false,
   };
 };
 
@@ -111,7 +111,7 @@ class MapInteraction extends Component<
     disableZoom: false,
     disablePan: false,
     longtapMinDuration: 1000,
-    longtapMaxDuration: 3000
+    longtapMaxDuration: 3000,
   };
 
   state = getInitialState(this.props);
@@ -182,7 +182,7 @@ class MapInteraction extends Component<
 
     this.setState({
       scale: clamp(newProps.minScale, scale, newProps.maxScale),
-      translation: this.clampTranslation(translation, newProps)
+      translation: this.clampTranslation(translation, newProps),
     });
   }
 
@@ -276,13 +276,13 @@ class MapInteraction extends Component<
     const dragY = pointer.clientY - startPointer.clientY;
     const newTranslation = {
       x: translation.x + dragX,
-      y: translation.y + dragY
+      y: translation.y + dragY,
     };
 
     this.setState(
       {
         translation: this.clampTranslation(newTranslation),
-        disallowChildClicks: Boolean(Math.abs(dragX) + Math.abs(dragY) > 2)
+        disallowChildClicks: Boolean(Math.abs(dragX) + Math.abs(dragY) > 2),
       },
       () => this.updateParent()
     );
@@ -306,7 +306,7 @@ class MapInteraction extends Component<
 
     const mousePos = this.clientPosToTranslatedPos({
       x: e.clientX,
-      y: e.clientY
+      y: e.clientY,
     });
 
     this.scaleFromPoint(newScale, mousePos);
@@ -322,7 +322,7 @@ class MapInteraction extends Component<
       timestamp: Date.now(),
       pointers,
       scale: this.state.scale,
-      translation: this.state.translation
+      translation: this.state.translation,
     };
   };
 
@@ -335,7 +335,7 @@ class MapInteraction extends Component<
       xMax,
       xMin,
       yMax,
-      yMin
+      yMin,
     } = props.translationBounds as TranslationBounds;
     xMin = xMin !== undefined ? xMin : -Infinity;
     yMin = yMin !== undefined ? yMin : -Infinity;
@@ -344,7 +344,7 @@ class MapInteraction extends Component<
 
     return {
       x: clamp(xMin, x, xMax),
-      y: clamp(yMin, y, yMax)
+      y: clamp(yMin, y, yMax),
     };
   };
 
@@ -353,7 +353,7 @@ class MapInteraction extends Component<
       this.containerNode && this.containerNode.getBoundingClientRect();
     return {
       x: ((clientOffset && clientOffset.left) || 0) + translation.x,
-      y: ((clientOffset && clientOffset.top) || 0) + translation.y
+      y: ((clientOffset && clientOffset.top) || 0) + translation.y,
     };
   };
 
@@ -365,7 +365,7 @@ class MapInteraction extends Component<
     const origin = this.translatedOrigin(translation);
     return {
       x: x - origin.x,
-      y: y - origin.y
+      y: y - origin.y,
     };
   };
 
@@ -375,18 +375,18 @@ class MapInteraction extends Component<
 
     const focalPtDelta = {
       x: coordChange(focalPt.x, scaleRatio),
-      y: coordChange(focalPt.y, scaleRatio)
+      y: coordChange(focalPt.y, scaleRatio),
     };
 
     const newTranslation = {
       x: translation.x - focalPtDelta.x,
-      y: translation.y - focalPtDelta.y
+      y: translation.y - focalPtDelta.y,
     };
 
     this.setState(
       {
         scale: newScale,
-        translation: this.clampTranslation(newTranslation)
+        translation: this.clampTranslation(newTranslation),
       },
       () => this.updateParent()
     );
@@ -421,7 +421,7 @@ class MapInteraction extends Component<
 
     const dragDelta = {
       x: newMidPoint.x - startMidpoint.x,
-      y: newMidPoint.y - startMidpoint.y
+      y: newMidPoint.y - startMidpoint.y,
     };
 
     const scaleRatio = newScale / startScale;
@@ -432,18 +432,18 @@ class MapInteraction extends Component<
     );
     const focalPtDelta = {
       x: coordChange(focalPt.x, scaleRatio),
-      y: coordChange(focalPt.y, scaleRatio)
+      y: coordChange(focalPt.y, scaleRatio),
     };
 
     const newTranslation = {
       x: this.startPointerInfo.translation.x - focalPtDelta.x + dragDelta.x,
-      y: this.startPointerInfo.translation.y - focalPtDelta.y + dragDelta.y
+      y: this.startPointerInfo.translation.y - focalPtDelta.y + dragDelta.y,
     };
 
     this.setState(
       {
         scale: newScale,
-        translation: this.clampTranslation(newTranslation)
+        translation: this.clampTranslation(newTranslation),
       },
       () => this.updateParent()
     );
@@ -513,7 +513,7 @@ class MapInteraction extends Component<
           height: "100%",
           width: "100%",
           position: "relative", // for absolutely positioned children
-          touchAction: "none"
+          touchAction: "none",
         }}
         onClickCapture={handleTouchOrClickCapture}
         onTouchEndCapture={handleTouchOrClickCapture}
@@ -521,7 +521,7 @@ class MapInteraction extends Component<
         {(children || undefined) &&
           children({
             translation,
-            scale
+            scale,
             // offsetHeight: getOffsetHeight(this.containerNode),
             // offsetWidth: getOffsetWidth(this.containerNode)
           })}
