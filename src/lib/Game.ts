@@ -509,7 +509,7 @@ export class Game implements IGame {
           }
           drawPoint(this.ctx, cell, x, y, this.options, color, k);
         } else {
-          debugger;
+          // debugger;
         }
       }
     }

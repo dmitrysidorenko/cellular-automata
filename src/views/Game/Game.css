@@ -25,7 +25,7 @@
   border-top: 2px solid #171616;
   will-change: height;
   transition: height 300ms ease;
-  height: 94px;
+  height: 91px;
   overflow: hidden;
 }
 .Controls.expand {
@@ -36,9 +36,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  flex-direction: row-reverse;
   width: 100%;
-  padding: 15px 0;
+  padding: 12px 0 15px 0;
 }
 .Controls > .extra {
   width: 100%;
@@ -156,4 +155,36 @@
   font-weight: bold;
   font-size: 20px;
   text-align: center;
+}
+
+.dashboard {
+  font-weight: 500;
+  font-size: 18px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0px;
+  /* border-bottom: 2px solid #171616; */
+}
+
+.dashboard > .dashboard__left {
+  width: 25%;
+  text-align: center;
+  background-color: #242425;
+  border-radius: 0 2px 2px 0;
+}
+.dashboard > .dashboard__score {
+  width: 50%;
+  text-align: center;
+  background-color: #242425;
+  margin: 0 4px;
+  border-radius: 2px;
+}
+.dashboard > .dashboard__steps {
+  width: 25%;
+  text-align: center;
+  background-color: #242425;
+  border-radius: 2px 0 0 2px;
 }

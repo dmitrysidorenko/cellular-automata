@@ -16,7 +16,7 @@ body,
   margin: 0;
   /* background: #1d1c1c; */
   background: var(--Background);
-  color: rgb(182, 182, 182);
+  color: var(--Text);
 }
 
 * {

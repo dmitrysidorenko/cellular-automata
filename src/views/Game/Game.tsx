@@ -76,12 +76,14 @@ const calcScaledCellWidth = (
   return cellWidth * scale;
 };
 
-interface IScoreProps {
+interface IDashboardProps {
   game: Game;
+  borderColor: string;
 }
-const Score = ({ game }: IScoreProps) => {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const stepRef = useRef<HTMLDivElement | null>(null);
+const Dashboard = ({ game, borderColor }: IDashboardProps) => {
+  const scoreRef = useRef<HTMLDivElement | null>(null);
+  const leftRef = useRef<HTMLDivElement | null>(null);
+  const stepsRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     let timeout: any = null;
     const updateScore = () => {
@@ -95,12 +97,15 @@ const Score = ({ game }: IScoreProps) => {
           : game.scoreVelocity < 6000
           ? game.colors.oldCell
           : game.colors.liveCell;
-      if (ref.current) {
-        ref.current.innerText = game.score.toLocaleString();
-        ref.current.style.color = color;
+      if (scoreRef.current) {
+        scoreRef.current.innerText = game.score.toLocaleString();
+        scoreRef.current.style.color = color;
       }
-      if (stepRef.current) {
-        stepRef.current.innerText = game.currentStep.toLocaleString();
+      if (leftRef.current) {
+        leftRef.current.innerText = game.steps.toLocaleString();
+      }
+      if (stepsRef.current) {
+        stepsRef.current.innerText = game.currentStep.toLocaleString();
       }
       timeout = setTimeout(updateScore, 1000 / 30);
     };
@@ -109,42 +114,12 @@ const Score = ({ game }: IScoreProps) => {
   }, []);
 
   return (
-    <div className="score">
-      <div ref={ref} />
-      <div ref={stepRef} />
+    <div className="dashboard" style={{ borderColor }}>
+      <div className="dashboard__left" ref={leftRef} />
+      <div className="dashboard__score" ref={scoreRef} />
+      <div className="dashboard__steps" ref={stepsRef} />
     </div>
   );
-};
-
-interface IStepsProps {
-  game: Game;
-}
-const Steps = ({ game }: IScoreProps) => {
-  const ref = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    let timeout: any = null;
-    const updateScore = () => {
-      const color =
-        game.steps > 8
-          ? "#ffffff"
-          : game.score > 6
-          ? game.colors.superOldCell
-          : game.score > 4
-          ? game.colors.veryOldCell
-          : game.score > 2
-          ? game.colors.oldCell
-          : game.colors.liveCell;
-      if (ref.current) {
-        ref.current.innerText = game.steps.toLocaleString();
-        ref.current.style.color = color;
-      }
-      timeout = setTimeout(updateScore, 1000 / 30);
-    };
-    updateScore();
-    return () => clearTimeout(timeout);
-  }, []);
-
-  return <div ref={ref} className="steps" />;
 };
 
 type IGameComponentProps = {
@@ -365,7 +340,6 @@ function GameView() {
         }}
       >
         <div className="buttons">
-          <Score game={game} />
           <PlasticButton
             type="regular"
             size="small"
@@ -427,7 +401,6 @@ function GameView() {
           >
             {messages.menuBtn}
           </PlasticButton>
-          <Steps game={game} />
         </div>
         <div className="extra">
           <div className="grid-size-buttons">
@@ -464,6 +437,12 @@ function GameView() {
         ref={playgroundRef}
         unselectable="on"
       >
+        <Dashboard
+          game={game}
+          borderColor={
+            [Colors.Secondary, Colors.Danger, Colors.Secondary][appState]
+          }
+        />
         <Playground minScale={1} maxScale={20} refApi={playgroundStateRef}>
           <GameComponent
             game={game}
