@@ -255,7 +255,41 @@ export class Game implements IGame {
     this.viewport = props.viewport;
     this.clean = false;
     this.reset();
+    window.addEventListener("unload", () => this.persist());
   }
+
+  serialize() {
+    const arr = [
+      this.props.cols,
+      this.score,
+      ...this.matrix.map((cell) => [cell.index, cell.value ? 1 : 0, cell.age]),
+    ];
+    return JSON.stringify(arr);
+  }
+  static restore() {
+    const str = localStorage.getItem("persisted_game");
+    if (str) {
+      try {
+        const [cols, score, ...arr] = JSON.parse(str);
+        return {
+          cols,
+          score,
+          matrix: arr.map(([index, val, age]: [number, number, number]) =>
+            makeCell(val === 1, index, cols, age)
+          ),
+        };
+      } catch (error) {
+        localStorage.removeItem("persisted_game");
+      }
+    }
+    return null;
+  }
+
+  persist() {
+    const matrix_str = this.serialize();
+    localStorage.setItem("persisted_game", matrix_str);
+  }
+
   setViewport(viewport: IGameViewportUpdate) {
     this.viewport = { ...this.viewport, ...viewport };
     this.clean = false;

@@ -206,6 +206,7 @@ enum APP_STATE {
 }
 
 function GameView() {
+  const restoredGame = useMemo(() => Game.restore(), []);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const playgroundRef = React.useRef<HTMLDivElement>(null);
   const [, setRandom] = React.useState<number>(0);
@@ -214,7 +215,9 @@ function GameView() {
     translation: { x: number; y: number };
   }>({ scale: 1, translation: { x: 0, y: 0 } });
   const [appState, setAppState] = React.useState<APP_STATE>(APP_STATE.Off);
-  const [cols, setCols] = React.useState(80);
+  const [cols, setCols] = React.useState(
+    restoredGame ? restoredGame.cols || 80 : 80
+  );
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   const game = useMemo(() => {
@@ -226,13 +229,29 @@ function GameView() {
       canvasRef,
       playgroundRef
     );
+    if (restoredGame) {
+      g.matrix = restoredGame.matrix;
+      g.score = restoredGame.score;
+    }
     (window as any)["GGG"] = g;
     return g;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    game.setCols(cols);
+    let timeout: any = null;
+    const fn = () => {
+      game.persist();
+      setTimeout(fn, 5000);
+    };
+    setTimeout(fn, 5000);
+    return () => clearTimeout(timeout);
+  }, [game]);
+
+  useEffect(() => {
+    if (game.props.cols !== cols) {
+      game.setCols(cols);
+    }
   }, [game, cols]);
 
   const resetMap = useCallback(() => {
