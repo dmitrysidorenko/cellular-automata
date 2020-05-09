@@ -1,6 +1,7 @@
 import React from "react";
 import * as ca from "../ca";
 import { Colors } from "../design/palette";
+import * as config from '../config'
 
 declare global {
   interface Window {
@@ -234,7 +235,7 @@ export class Game implements IGame {
   _gameStateChangeCallbacks: GameStateChangeCallback[] = [];
   score: number = 0;
   scoreVelocity: number = 0;
-  steps: number = 20;
+  steps: number = config.startTogglePoints;
   currentStep: number = 0;
 
   constructor(
@@ -323,7 +324,7 @@ export class Game implements IGame {
     this.clean = false;
     this.score = 0;
     this.scoreVelocity = 0;
-    this.steps = 10;
+    this.steps = config.startTogglePoints;
     this.currentStep = 0;
   };
   swap = () => {
