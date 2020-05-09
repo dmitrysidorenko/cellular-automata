@@ -33,6 +33,10 @@
 }
 
 .Controls > .buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row-reverse;
   width: 100%;
   padding: 15px 0;
 }
@@ -138,4 +142,15 @@
 .update-block--text {
   display: inline-block;
   margin-right: 8px;
+}
+
+.score {
+  font-weight: bold;
+  font-size: 20px;
+  width: 100px;
+  text-align: center;
+}
+
+.right-span {
+  width: 40px;
 }

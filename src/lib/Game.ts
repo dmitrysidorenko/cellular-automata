@@ -194,7 +194,7 @@ interface IGame {
   generation: number;
   updateTimeout: any;
   colors: IGameColors;
-  update(): void;
+  update(elapsedTime: number): void;
   toggleCell(index: number): void;
   draw(): void;
   reset(): void;
@@ -232,6 +232,8 @@ export class Game implements IGame {
     deadCell: Colors.DeadCell,
   };
   _gameStateChangeCallbacks: GameStateChangeCallback[] = [];
+  score: number = 0;
+  scoreVelocity: number = 0;
   constructor(
     props: IGameProps,
     canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
@@ -278,6 +280,8 @@ export class Game implements IGame {
     this.siblingsMap = makeCellSiblingsMap(this.props.cols, this.matrix);
     this.generation = 0;
     this.clean = false;
+    this.score = 0;
+    this.scoreVelocity = 0;
   };
   swap = () => {
     const tmp = this.matrix;
@@ -293,11 +297,11 @@ export class Game implements IGame {
     let lastTimestamp = Date.now();
     const updateCallback = () => {
       const currentTimestamp = Date.now();
-      const diff = currentTimestamp - lastTimestamp;
+      const elapsedTime = currentTimestamp - lastTimestamp;
       let afterTimestamp = Date.now();
       let shouldStop = false;
-      if (diff >= updateStepInterval) {
-        this.update();
+      if (elapsedTime >= updateStepInterval) {
+        this.update(elapsedTime);
         if (this.clean) {
           shouldStop = true;
           const changes = {
@@ -320,8 +324,9 @@ export class Game implements IGame {
   stop = () => {
     clearTimeout(this.updateTimeout);
   };
-  update = () => {
+  update = (elapsedTime: number) => {
     const { matrix, matrixBuffer, siblingsMap } = this;
+    let score = 0;
     matrix.forEach((cell, i) => {
       const sum = siblingsMap[i].reduce(
         (total, siblingIndex) => total + (matrix[siblingIndex].value ? 1 : 0),
@@ -347,7 +352,12 @@ export class Game implements IGame {
       if (cell.value !== result && this.clean) {
         this.clean = false;
       }
+      if (cell.age) {
+        score += Math.floor(16 / cell.age); // Math.floor(((16 / cell.age) * elapsedTime) / 1000);
+      }
     });
+    this.scoreVelocity = score * (elapsedTime / 1000);
+    this.score = score;
     this.swap();
   };
   options: {

@@ -5,6 +5,7 @@ import React, {
   SyntheticEvent,
   ReactElement,
   useMemo,
+  useRef,
 } from "react";
 import * as ca from "../../ca";
 import { getRealMouseCoords } from "../../utils";
@@ -73,6 +74,37 @@ const calcScaledCellWidth = (
 ) => {
   const cellWidth = Math.min(width, height) / cols;
   return cellWidth * scale;
+};
+
+interface IScoreProps {
+  game: Game;
+}
+const Score = ({ game }: IScoreProps) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    let timeout: any = null;
+    const updateScore = () => {
+      const color =
+        game.score === 0
+          ? "#ffffff"
+          : game.score < 1500
+          ? game.colors.superOldCell
+          : game.score < 3000
+          ? game.colors.veryOldCell
+          : game.score < 6000
+          ? game.colors.oldCell
+          : game.colors.liveCell;
+      if (ref.current) {
+        ref.current.innerText = game.score.toLocaleString();
+        ref.current.style.color = color;
+      }
+      timeout = setTimeout(updateScore, 1000 / 30);
+    };
+    updateScore();
+    return () => clearTimeout(timeout);
+  }, []);
+
+  return <div ref={ref} className="score" />;
 };
 
 type IGameComponentProps = {
@@ -272,13 +304,14 @@ function GameView() {
         }}
       >
         <div className="buttons">
+          <Score game={game} />
           <PlasticButton
             type="regular"
             size="small"
             onClick={(e: SyntheticEvent) => {
               if (game) {
                 setAppState(APP_STATE.Sleep);
-                game.update();
+                game.update(1);
                 game.draw();
               }
               e && e.stopPropagation && e.stopPropagation();
@@ -333,6 +366,7 @@ function GameView() {
           >
             {messages.menuBtn}
           </PlasticButton>
+          <div className="right-span" />
         </div>
         <div className="extra">
           <div className="grid-size-buttons">
