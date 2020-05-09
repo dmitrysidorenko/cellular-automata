@@ -234,7 +234,7 @@ export class Game implements IGame {
   _gameStateChangeCallbacks: GameStateChangeCallback[] = [];
   score: number = 0;
   scoreVelocity: number = 0;
-  steps: number = 10;
+  steps: number = 20;
   currentStep: number = 0;
 
   constructor(
@@ -402,9 +402,9 @@ export class Game implements IGame {
         score += Math.floor(16 / cell.age); // Math.floor(((16 / cell.age) * elapsedTime) / 1000);
       }
     });
-    const curMillions = Math.floor(this.score / 1000000);
-    const newMillions = Math.floor((this.score + score) / 1000000);
-    this.steps += newMillions - curMillions;
+    const currentLevel = Math.floor(this.score / 10000);
+    const newLevel = Math.floor((this.score + score) / 10000);
+    this.steps += newLevel - currentLevel;
     this.scoreVelocity = score;
     this.score += score;
     this.currentStep += 1;
