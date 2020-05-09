@@ -20,6 +20,7 @@ import { PlusIcon } from "../../components/Icons/PlusIcon";
 import { ReloadIcon } from "../../components/Icons/ReloadIcon";
 import "./Game.css";
 import { Game } from "../../lib/Game";
+import * as config from "../../config";
 
 const messages = {
   runOneStep: <PlusIcon />,
@@ -429,6 +430,9 @@ function GameView() {
             >
               {messages.reloadPageBtn}
             </PlasticButton>
+            <div style={{ display: "inline-block", marginLeft: 8 }}>
+              ver {config.version}
+            </div>
           </div>
         </div>
       </div>
