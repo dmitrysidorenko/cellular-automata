@@ -402,9 +402,13 @@ export class Game implements IGame {
         score += Math.floor(16 / cell.age); // Math.floor(((16 / cell.age) * elapsedTime) / 1000);
       }
     });
+    const curMillions = Math.floor(this.score / 1000000);
+    const newMillions = Math.floor((this.score + score) / 1000000);
+    this.steps += newMillions - curMillions;
     this.scoreVelocity = score;
     this.score += score;
     this.currentStep += 1;
+
     this.swap();
   };
   options: {
