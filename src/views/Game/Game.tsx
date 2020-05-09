@@ -81,21 +81,61 @@ interface IScoreProps {
 }
 const Score = ({ game }: IScoreProps) => {
   const ref = useRef<HTMLDivElement | null>(null);
+  const stepRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     let timeout: any = null;
     const updateScore = () => {
       const color =
-        game.score === 0
+        game.scoreVelocity === 0
           ? "#ffffff"
-          : game.score < 1500
+          : game.scoreVelocity < 1500
           ? game.colors.superOldCell
-          : game.score < 3000
+          : game.scoreVelocity < 3000
           ? game.colors.veryOldCell
-          : game.score < 6000
+          : game.scoreVelocity < 6000
           ? game.colors.oldCell
           : game.colors.liveCell;
       if (ref.current) {
         ref.current.innerText = game.score.toLocaleString();
+        ref.current.style.color = color;
+      }
+      if (stepRef.current) {
+        stepRef.current.innerText = game.currentStep.toLocaleString();
+      }
+      timeout = setTimeout(updateScore, 1000 / 30);
+    };
+    updateScore();
+    return () => clearTimeout(timeout);
+  }, []);
+
+  return (
+    <div className="score">
+      <div ref={ref} />
+      <div ref={stepRef} />
+    </div>
+  );
+};
+
+interface IStepsProps {
+  game: Game;
+}
+const Steps = ({ game }: IScoreProps) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    let timeout: any = null;
+    const updateScore = () => {
+      const color =
+        game.steps > 8
+          ? "#ffffff"
+          : game.score > 6
+          ? game.colors.superOldCell
+          : game.score > 4
+          ? game.colors.veryOldCell
+          : game.score > 2
+          ? game.colors.oldCell
+          : game.colors.liveCell;
+      if (ref.current) {
+        ref.current.innerText = game.steps.toLocaleString();
         ref.current.style.color = color;
       }
       timeout = setTimeout(updateScore, 1000 / 30);
@@ -104,7 +144,7 @@ const Score = ({ game }: IScoreProps) => {
     return () => clearTimeout(timeout);
   }, []);
 
-  return <div ref={ref} className="score" />;
+  return <div ref={ref} className="steps" />;
 };
 
 type IGameComponentProps = {
@@ -232,6 +272,8 @@ function GameView() {
     if (restoredGame) {
       g.matrix = restoredGame.matrix;
       g.score = restoredGame.score;
+      g.steps = restoredGame.steps;
+      g.currentStep = restoredGame.currentStep;
     }
     (window as any)["GGG"] = g;
     return g;
@@ -385,7 +427,7 @@ function GameView() {
           >
             {messages.menuBtn}
           </PlasticButton>
-          <div className="right-span" />
+          <Steps game={game} />
         </div>
         <div className="extra">
           <div className="grid-size-buttons">

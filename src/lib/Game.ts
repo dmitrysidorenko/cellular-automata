@@ -234,6 +234,9 @@ export class Game implements IGame {
   _gameStateChangeCallbacks: GameStateChangeCallback[] = [];
   score: number = 0;
   scoreVelocity: number = 0;
+  steps: number = 10;
+  currentStep: number = 0;
+
   constructor(
     props: IGameProps,
     canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
@@ -262,6 +265,8 @@ export class Game implements IGame {
     const arr = [
       this.props.cols,
       this.score,
+      this.steps,
+      this.currentStep,
       ...this.matrix.map((cell) => [cell.index, cell.value ? 1 : 0, cell.age]),
     ];
     return JSON.stringify(arr);
@@ -270,10 +275,12 @@ export class Game implements IGame {
     const str = localStorage.getItem("persisted_game");
     if (str) {
       try {
-        const [cols, score, ...arr] = JSON.parse(str);
+        const [cols, score, steps, currentStep, ...arr] = JSON.parse(str);
         return {
           cols,
           score,
+          steps,
+          currentStep,
           matrix: arr.map(([index, val, age]: [number, number, number]) =>
             makeCell(val === 1, index, cols, age)
           ),
@@ -316,6 +323,8 @@ export class Game implements IGame {
     this.clean = false;
     this.score = 0;
     this.scoreVelocity = 0;
+    this.steps = 10;
+    this.currentStep = 0;
   };
   swap = () => {
     const tmp = this.matrix;
@@ -323,8 +332,11 @@ export class Game implements IGame {
     this.matrixBuffer = tmp;
   };
   toggleCell = (index: number) => {
-    this.matrix[index].value = !this.matrix[index].value;
-    this.clean = false;
+    if (this.steps > 0) {
+      this.steps -= 1;
+      this.matrix[index].value = !this.matrix[index].value;
+      this.clean = false;
+    }
   };
   start = () => {
     const updateStepInterval = 100;
@@ -390,8 +402,9 @@ export class Game implements IGame {
         score += Math.floor(16 / cell.age); // Math.floor(((16 / cell.age) * elapsedTime) / 1000);
       }
     });
-    this.scoreVelocity = score * (elapsedTime / 1000);
-    this.score = score;
+    this.scoreVelocity = score;
+    this.score += score;
+    this.currentStep += 1;
     this.swap();
   };
   options: {

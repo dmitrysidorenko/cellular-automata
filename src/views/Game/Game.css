@@ -145,12 +145,15 @@
 }
 
 .score {
+  width: 100px;
   font-weight: bold;
   font-size: 20px;
-  width: 100px;
   text-align: center;
 }
 
-.right-span {
+.steps {
   width: 40px;
+  font-weight: bold;
+  font-size: 20px;
+  text-align: center;
 }
