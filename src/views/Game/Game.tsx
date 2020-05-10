@@ -8,7 +8,7 @@ import React, {
   useRef,
 } from "react";
 import * as ca from "../../ca";
-import { getRealMouseCoords } from "../../utils";
+import { getRealMouseCoords, downloadCanvasAsImage } from "../../utils";
 import { Playground } from "../../Playgraoud";
 import { Colors } from "../../design/palette";
 import PlasticButton from "../../components/Buttons/PlasticButton";
@@ -103,7 +103,9 @@ const Dashboard = ({ game, borderColor }: IDashboardProps) => {
         scoreRef.current.style.color = color;
       }
       if (leftRef.current) {
-        leftRef.current.innerText = game.steps.toLocaleString();
+        leftRef.current.innerText = game.steps
+          ? game.steps.toLocaleString()
+          : "-";
       }
       if (stepsRef.current) {
         stepsRef.current.innerText = game.currentStep.toLocaleString();
@@ -234,25 +236,26 @@ function GameView() {
   const [cols, setCols] = React.useState(
     restoredGame ? restoredGame.cols || 80 : 80
   );
+  const [speed, setSpeed] = React.useState(
+    restoredGame ? restoredGame.speed || 1 : 1
+  );
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   const game = useMemo(() => {
-    const g = new Game(
+    const gameInstance = new Game(
       {
         cols,
+        speed: 1,
         viewport: playgroundStateRef.current,
       },
       canvasRef,
       playgroundRef
     );
     if (restoredGame) {
-      g.matrix = restoredGame.matrix;
-      g.score = restoredGame.score;
-      g.steps = restoredGame.steps;
-      g.currentStep = restoredGame.currentStep;
+      gameInstance.setState(restoredGame);
     }
-    (window as any)["GGG"] = g;
-    return g;
+    (window as any)["GGG"] = gameInstance;
+    return gameInstance;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -267,10 +270,16 @@ function GameView() {
   }, [game]);
 
   useEffect(() => {
-    if (game.props.cols !== cols) {
+    if (game.params.cols !== cols) {
       game.setCols(cols);
     }
   }, [game, cols]);
+
+  useEffect(() => {
+    if (game.params.speed !== speed) {
+      game.setSpeed(speed);
+    }
+  }, [game, speed]);
 
   const resetMap = useCallback(() => {
     setAppState(APP_STATE.Off);
@@ -291,6 +300,7 @@ function GameView() {
         oldCell: Colors.Secondary,
         veryOldCell: Colors.Secondary,
         superOldCell: Colors.Secondary,
+        wallCell: Colors.WallCell,
       });
     } else {
       game.setColors({
@@ -299,6 +309,7 @@ function GameView() {
         oldCell: Colors.OldCell,
         veryOldCell: Colors.VeryOldCell,
         superOldCell: Colors.SuperOldCell,
+        wallCell: Colors.WallCell,
       });
     }
     if (appState === APP_STATE.On) {
@@ -405,6 +416,20 @@ function GameView() {
         </div>
         <div className="extra">
           <div className="grid-size-buttons">
+            {[0.5, 1, 2, 4, 8, 16].map((val) => (
+              <PlasticButton
+                type={speed === val ? "secondary" : "regular"}
+                size="small"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSpeed(val);
+                }}
+              >
+                {String(val) + "x"}
+              </PlasticButton>
+            ))}
+          </div>
+          <div className="grid-size-buttons">
             {[20, 40, 80, 160, 200, 240, 280].map((v) => (
               <PlasticButton
                 type={cols === v ? "secondary" : "regular"}
@@ -418,6 +443,17 @@ function GameView() {
               </PlasticButton>
             ))}
           </div>
+          {/* <PlasticButton
+            onClick={(e) => {
+              e.preventDefault();
+              if (canvasRef.current) {
+                downloadCanvasAsImage(canvasRef.current);
+              }
+            }}
+          >
+            capture
+          </PlasticButton> */}
+
           <div className="update-block">
             <span className="update-block--text">Reload to update</span>
             <PlasticButton

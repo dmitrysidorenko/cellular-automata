@@ -1,7 +1,7 @@
 import React from "react";
 import * as ca from "../ca";
 import { Colors } from "../design/palette";
-import * as config from '../config'
+import * as config from "../config";
 
 declare global {
   interface Window {
@@ -67,7 +67,7 @@ function prepareCanvas(
   ctx.lineWidth = 4;
 }
 
-function drawPoint(
+function drawCell(
   ctx: any,
   cell: ICell,
   xi: number,
@@ -93,8 +93,8 @@ function drawPoint(
   ) {
     drawRect(
       ctx,
-      cell.value ? x + k : x + k,
-      cell.value ? y + k : y + k,
+      cell.isAlive ? x + k : x + k,
+      cell.isAlive ? y + k : y + k,
       options.cellWidth - k * 2,
       options.cellHeight - k * 2,
       color,
@@ -106,7 +106,7 @@ function drawPoint(
 interface ICell {
   x: number;
   y: number;
-  value: boolean;
+  isAlive: boolean;
   age: number;
   index: number;
   updated: boolean;
@@ -118,7 +118,7 @@ function makeCell(
   age: number = 0
 ): ICell {
   const { x, y } = ca.index2point(cols, index);
-  return { x, y, value, index, updated: true, age };
+  return { x, y, isAlive: value, index, updated: true, age };
 }
 
 const from = (n: number, fn = (_: any, i: number): any => i): any[] =>
@@ -157,8 +157,9 @@ const makeCellSiblingsMap = (cols: number, matrix: ICell[]) => {
   });
 };
 
-interface IGameProps {
+interface IGameParams {
   cols: number;
+  speed: number;
   viewport: IGameViewport;
 }
 export interface IViewportTranslation {
@@ -182,16 +183,15 @@ interface IGameColors {
   oldCell: string;
   veryOldCell: string;
   superOldCell: string;
+  wallCell: string;
 }
 
 interface IGame {
-  props: IGameProps;
+  params: IGameParams;
   matrix: ICell[];
   matrixBuffer: ICell[];
   siblingsMap: number[][];
   viewport: IGameViewport;
-  canvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
-  ctx: CanvasRenderingContext2D | null;
   generation: number;
   updateTimeout: any;
   colors: IGameColors;
@@ -213,17 +213,22 @@ const calcCellWidth = (width: number, height: number, cols: number) => {
 
 type GameChangeStateEvent = { running: boolean };
 type GameStateChangeCallback = (changes: GameChangeStateEvent) => void;
+
+interface IGameState {
+  cols: number;
+  score: number;
+  steps: number;
+  speed: number;
+  currentStep: number;
+  matrix: ICell[];
+}
 export class Game implements IGame {
-  props: IGameProps;
   matrix: ICell[];
   matrixBuffer: ICell[];
   siblingsMap: number[][];
   viewport: IGameViewport;
-  ctx: CanvasRenderingContext2D | null;
   generation: number;
   updateTimeout: any;
-  canvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
-  playgroundRef: React.MutableRefObject<HTMLElement | null>;
   clean: boolean;
   colors: IGameColors = {
     liveCell: Colors.AliveCell,
@@ -231,17 +236,34 @@ export class Game implements IGame {
     veryOldCell: Colors.VeryOldCell,
     superOldCell: Colors.SuperOldCell,
     deadCell: Colors.DeadCell,
+    wallCell: Colors.Background,
   };
   _gameStateChangeCallbacks: GameStateChangeCallback[] = [];
   score: number = 0;
   scoreVelocity: number = 0;
   steps: number = config.startTogglePoints;
   currentStep: number = 0;
+  options: {
+    cellWidth: number;
+    cellHeight: number;
+    offsetX: number;
+    offsetY: number;
+    height: number;
+    width: number;
+  } = {
+    cellWidth: 0,
+    cellHeight: 0,
+    offsetX: 0,
+    offsetY: 0,
+    height: 0,
+    width: 0,
+  };
+  private ctx: CanvasRenderingContext2D | null;
 
   constructor(
-    props: IGameProps,
-    canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
-    playgroundRef: React.MutableRefObject<HTMLElement | null>
+    public params: IGameParams,
+    protected canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
+    protected playgroundRef: React.MutableRefObject<HTMLElement | null>
   ) {
     this.generation = 0;
     this.ctx = null;
@@ -250,29 +272,28 @@ export class Game implements IGame {
         alpha: ENABLE_CANVAS_ALPHA,
       });
     }
-    this.canvasRef = canvasRef;
-    this.playgroundRef = playgroundRef;
-    this.props = props;
     this.matrix = [];
     this.matrixBuffer = [];
     this.siblingsMap = [];
-    this.viewport = props.viewport;
+    this.viewport = params.viewport;
     this.clean = false;
     this.reset();
     window.addEventListener("unload", () => this.persist());
   }
 
-  serialize() {
-    const arr = [
-      this.props.cols,
-      this.score,
-      this.steps,
-      this.currentStep,
-      ...this.matrix.map((cell) => [cell.index, cell.value ? 1 : 0, cell.age]),
-    ];
-    return JSON.stringify(arr);
-  }
-  static restore() {
+  reset = () => {
+    this.matrix = makeMatrix(this.params.cols);
+    this.matrixBuffer = makeMatrix(this.params.cols);
+    this.siblingsMap = makeCellSiblingsMap(this.params.cols, this.matrix);
+    this.generation = 0;
+    this.clean = false;
+    this.score = 0;
+    this.scoreVelocity = 0;
+    this.steps = config.startTogglePoints;
+    this.currentStep = 0;
+  };
+
+  static restore(): IGameState | null {
     const str = localStorage.getItem("persisted_game");
     if (str) {
       try {
@@ -280,10 +301,11 @@ export class Game implements IGame {
         return {
           cols,
           score,
-          steps,
+          steps: steps === -1 ? Infinity : steps,
+          speed: 1,
           currentStep,
-          matrix: arr.map(([index, val, age]: [number, number, number]) =>
-            makeCell(val === 1, index, cols, age)
+          matrix: arr.map(([index, isAlive, age]: [number, number, number]) =>
+            makeCell(isAlive === 1, index, cols, age)
           ),
         };
       } catch (error) {
@@ -292,19 +314,42 @@ export class Game implements IGame {
     }
     return null;
   }
-
+  serialize() {
+    const arr = [
+      this.params.cols,
+      this.score,
+      isFinite(this.steps) ? this.steps : -1,
+      this.currentStep,
+      ...this.matrix.map((cell) => [
+        cell.index,
+        cell.isAlive ? 1 : 0,
+        cell.age,
+      ]),
+    ];
+    return JSON.stringify(arr);
+  }
   persist() {
     const matrix_str = this.serialize();
     localStorage.setItem("persisted_game", matrix_str);
   }
 
+  setState = (state: IGameState): void => {
+    this.matrix = state.matrix.map((c) => ({ ...c }));
+    this.matrixBuffer = state.matrix.map((c) => ({ ...c }));
+    this.score = state.score;
+    this.steps = state.steps;
+    this.currentStep = state.currentStep;
+  };
+  setSpeed = (speed: number): void => {
+    this.params.speed = speed;
+  };
   setViewport(viewport: IGameViewportUpdate) {
     this.viewport = { ...this.viewport, ...viewport };
     this.clean = false;
   }
   setCols(cols: number) {
-    if (this.props.cols !== cols) {
-      this.props.cols = cols;
+    if (this.params.cols !== cols) {
+      this.params.cols = cols;
       this.reset();
     }
   }
@@ -316,33 +361,19 @@ export class Game implements IGame {
       this._gameStateChangeCallbacks.push(cb);
     }
   };
-  reset = () => {
-    this.matrix = makeMatrix(this.props.cols);
-    this.matrixBuffer = makeMatrix(this.props.cols);
-    this.siblingsMap = makeCellSiblingsMap(this.props.cols, this.matrix);
-    this.generation = 0;
-    this.clean = false;
-    this.score = 0;
-    this.scoreVelocity = 0;
-    this.steps = config.startTogglePoints;
-    this.currentStep = 0;
-  };
-  swap = () => {
-    const tmp = this.matrix;
-    this.matrix = this.matrixBuffer;
-    this.matrixBuffer = tmp;
-  };
+
   toggleCell = (index: number) => {
     if (this.steps > 0) {
       this.steps -= 1;
-      this.matrix[index].value = !this.matrix[index].value;
+      this.matrix[index].isAlive = !this.matrix[index].isAlive;
+      this.matrixBuffer[index].isAlive = this.matrix[index].isAlive;
       this.clean = false;
     }
   };
   start = () => {
-    const updateStepInterval = 100;
     let lastTimestamp = Date.now();
     const updateCallback = () => {
+      const updateStepInterval = 100 / this.params.speed;
       const currentTimestamp = Date.now();
       const elapsedTime = currentTimestamp - lastTimestamp;
       let afterTimestamp = Date.now();
@@ -371,35 +402,44 @@ export class Game implements IGame {
   stop = () => {
     clearTimeout(this.updateTimeout);
   };
+
+  swap = () => {
+    const tmp = this.matrix;
+    this.matrix = this.matrixBuffer;
+    this.matrixBuffer = tmp;
+  };
   update = (elapsedTime: number) => {
     const { matrix, matrixBuffer, siblingsMap } = this;
     let score = 0;
     matrix.forEach((cell, i) => {
-      const sum = siblingsMap[i].reduce(
-        (total, siblingIndex) => total + (matrix[siblingIndex].value ? 1 : 0),
-        0
-      );
-      let result = false;
-      if (cell.value && sum > 1 && sum < 4) {
-        result = true;
-      } else {
-        if (sum === 3) {
-          result = true;
-        }
-      }
-      const bufferCell = matrixBuffer[i];
-      if (result) {
-        bufferCell.age = cell.value ? bufferCell.age + 1 : 1;
-      } else {
-        bufferCell.age = 0;
-      }
-      bufferCell.value = result;
-      bufferCell.updated = cell.value !== result;
+      const isWallCell = this.isCellWall(cell);
+      const sum = this.getSiblingsSum(siblingsMap[i]);
+      const isNewAlive = this.getCellAlive(cell, sum) || isWallCell;
 
-      if (cell.value !== result && this.clean) {
+      const bufferCell = matrixBuffer[i];
+      if (isNewAlive) {
+        bufferCell.age = cell.isAlive ? cell.age + 1 : 1;
+      } else {
+        switch (true) {
+          case !cell.isAlive && cell.age < 0 && cell.age > -6:
+            bufferCell.age = cell.age - 1;
+            break;
+          case cell.isAlive:
+            bufferCell.age = -1;
+            break;
+          default:
+            bufferCell.age = 0;
+        }
+        // bufferCell.age = cell.age < -2 ? 0 : cell.isAlive ? -1 : cell.age - 1;
+      }
+      bufferCell.isAlive = isNewAlive;
+      bufferCell.updated =
+        cell.isAlive !== bufferCell.isAlive || cell.age !== bufferCell.age;
+
+      if (cell.isAlive !== bufferCell.isAlive && this.clean) {
         this.clean = false;
       }
-      if (cell.age) {
+      if (cell.age > 0) {
         score += Math.floor(16 / cell.age); // Math.floor(((16 / cell.age) * elapsedTime) / 1000);
       }
     });
@@ -412,21 +452,53 @@ export class Game implements IGame {
 
     this.swap();
   };
-  options: {
-    cellWidth: number;
-    cellHeight: number;
-    offsetX: number;
-    offsetY: number;
-    height: number;
-    width: number;
-  } = {
-    cellWidth: 0,
-    cellHeight: 0,
-    offsetX: 0,
-    offsetY: 0,
-    height: 0,
-    width: 0,
+
+  getSiblingsSum = (siblingsIndexes: number[]) => {
+    return siblingsIndexes.reduce((total, siblingIndex) => {
+      const sibling = this.matrix[siblingIndex];
+      const isSiblingCellWall = this.isCellWall(sibling);
+      if (isSiblingCellWall || sibling.isAlive) {
+        return total + 1;
+      }
+      return total;
+    }, 0);
   };
+
+  isCellWall = (cell: ICell): boolean =>
+    cell.isAlive && cell.age > 12 && cell.age < 256;
+
+  getCellAlive = (cell: ICell, sum: number): boolean => {
+    if (cell.isAlive && sum > 1 && sum < 4) {
+      return true;
+    }
+    if (sum === 3) {
+      return true;
+    }
+    return false;
+  };
+  getCellColor = (cell: ICell) => {
+    if (!cell.isAlive) {
+      if (cell.age < 0) {
+        return ["#151515", "#171717", "#191919", '#1b1b1b', '#1d1d1d', "#1e1e1e"][-cell.age % 6];
+      }
+      return this.colors.deadCell;
+    }
+    switch (true) {
+      case this.isCellWall(cell):
+        return this.colors.wallCell;
+      case cell.age < 0:
+        return "#000000";
+      case cell.age > 16:
+        return this.colors.superOldCell;
+      case cell.age > 8:
+        return this.colors.veryOldCell;
+      case cell.age > 2:
+        return this.colors.oldCell;
+      default:
+        return this.colors.liveCell;
+    }
+  };
+
   getWidth = () => {
     const width =
       (this.playgroundRef.current && this.playgroundRef.current.offsetWidth) ||
@@ -439,6 +511,17 @@ export class Game implements IGame {
       0;
     return height;
   };
+  getCanvasCtx = () => {
+    if (this.ctx) {
+      return this.ctx;
+    }
+    if (!this.ctx && this.canvasRef.current) {
+      this.ctx = this.canvasRef.current.getContext("2d", {
+        alpha: ENABLE_CANVAS_ALPHA,
+      });
+    }
+  };
+
   draw = () => {
     if (!this.ctx && !this.canvasRef.current) {
       return;
@@ -449,7 +532,7 @@ export class Game implements IGame {
         alpha: ENABLE_CANVAS_ALPHA,
       });
     }
-    const cols = this.props.cols;
+    const cols = this.params.cols;
     const width = this.getWidth();
     const height = this.getHeight();
     const scale = this.viewport.scale;
@@ -500,19 +583,8 @@ export class Game implements IGame {
           const x = cell.x + cs * cols;
           const y = cell.y + rs * cols;
           // debugger;
-          let color = this.colors.deadCell;
-          if (cell.value) {
-            if (cell.age > 16) {
-              color = this.colors.superOldCell;
-            } else if (cell.age > 8) {
-              color = this.colors.veryOldCell;
-            } else if (cell.age > 2) {
-              color = this.colors.oldCell;
-            } else {
-              color = this.colors.liveCell;
-            }
-          }
-          drawPoint(this.ctx, cell, x, y, this.options, color, k);
+          const color = this.getCellColor(cell);
+          drawCell(this.ctx, cell, x, y, this.options, color, k);
         } else {
           // debugger;
         }

@@ -37,3 +37,13 @@ export function useInterval(callback: () => void, delay: number) {
     }
   }, [delay]);
 }
+
+export function downloadCanvasAsImage(canvas: HTMLCanvasElement) {
+  let downloadLink = document.createElement("a");
+  downloadLink.setAttribute("download", "CanvasAsImage.png");
+  canvas.toBlob(function (blob) {
+    let url = URL.createObjectURL(blob);
+    downloadLink.setAttribute("href", url);
+    downloadLink.click();
+  });
+}

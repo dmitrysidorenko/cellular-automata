@@ -12,6 +12,7 @@ export type Colors = {
   VeryOldCell: string;
   SuperOldCell: string;
   DeadCell: string;
+  WallCell: string;
 };
 export const Colors: Colors = {
   Background: "#000000",
@@ -26,5 +27,6 @@ export const Colors: Colors = {
   AliveCell: "#ffc107",
   OldCell: "#f44336",
   VeryOldCell: "#9c27b0",
-  SuperOldCell: "#3f51b5"
+  SuperOldCell: "#3f51b5",
+  WallCell: "#ffffff"
 };
