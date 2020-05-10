@@ -157,10 +157,16 @@ const makeCellSiblingsMap = (cols: number, matrix: ICell[]) => {
   });
 };
 
+export enum GameMode {
+  classic,
+  superpower,
+  madness,
+}
 interface IGameParams {
   cols: number;
   speed: number;
   viewport: IGameViewport;
+  mode: GameMode;
 }
 export interface IViewportTranslation {
   x: number;
@@ -194,7 +200,6 @@ interface IGame {
   viewport: IGameViewport;
   generation: number;
   updateTimeout: any;
-  colors: IGameColors;
   update(elapsedTime: number): void;
   toggleCell(index: number): void;
   draw(): void;
@@ -202,7 +207,6 @@ interface IGame {
   swap(): void;
   setViewport(viewport: IGameViewportUpdate): void;
   setCols(cols: number): void;
-  setColors(colors: IGameColors): void;
   onChange(cb: GameStateChangeCallback): void;
 }
 
@@ -211,16 +215,28 @@ const calcCellWidth = (width: number, height: number, cols: number) => {
   return cellWidth;
 };
 
-type GameChangeStateEvent = { running: boolean };
-type GameStateChangeCallback = (changes: GameChangeStateEvent) => void;
+export enum GameState {
+  running,
+  stopped,
+  paused,
+}
+type GameChangeStateEvent = {
+  state: GameState;
+  cols: number;
+  speed: number;
+  score: number;
+  mode: GameMode;
+};
+type GameStateChangeCallback = (data: GameChangeStateEvent) => void;
 
-interface IGameState {
+interface IGameSerialized {
   cols: number;
   score: number;
   steps: number;
   speed: number;
   currentStep: number;
   matrix: ICell[];
+  mode: GameMode;
 }
 export class Game implements IGame {
   matrix: ICell[];
@@ -230,14 +246,6 @@ export class Game implements IGame {
   generation: number;
   updateTimeout: any;
   clean: boolean;
-  colors: IGameColors = {
-    liveCell: Colors.AliveCell,
-    oldCell: Colors.OldCell,
-    veryOldCell: Colors.VeryOldCell,
-    superOldCell: Colors.SuperOldCell,
-    deadCell: Colors.DeadCell,
-    wallCell: Colors.Background,
-  };
   _gameStateChangeCallbacks: GameStateChangeCallback[] = [];
   score: number = 0;
   scoreVelocity: number = 0;
@@ -259,11 +267,17 @@ export class Game implements IGame {
     width: 0,
   };
   private ctx: CanvasRenderingContext2D | null;
+  public state: GameState = GameState.stopped;
 
   constructor(
     public params: IGameParams,
     protected canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
-    protected playgroundRef: React.MutableRefObject<HTMLElement | null>
+    protected playgroundRef: React.MutableRefObject<HTMLElement | null>,
+    protected colors: {
+      [GameState.running]: IGameColors;
+      [GameState.paused]: IGameColors;
+      [GameState.stopped]: IGameColors;
+    }
   ) {
     this.generation = 0;
     this.ctx = null;
@@ -293,17 +307,18 @@ export class Game implements IGame {
     this.currentStep = 0;
   };
 
-  static restore(): IGameState | null {
+  static restore(): IGameSerialized | null {
     const str = localStorage.getItem("persisted_game");
     if (str) {
       try {
-        const [cols, score, steps, currentStep, ...arr] = JSON.parse(str);
+        const [cols, score, steps, currentStep, mode, ...arr] = JSON.parse(str);
         return {
+          mode,
           cols,
-          score,
+          score: score || 0,
           steps: steps === -1 ? Infinity : steps,
           speed: 1,
-          currentStep,
+          currentStep: currentStep || 0,
           matrix: arr.map(([index, isAlive, age]: [number, number, number]) =>
             makeCell(isAlive === 1, index, cols, age)
           ),
@@ -320,6 +335,7 @@ export class Game implements IGame {
       this.score,
       isFinite(this.steps) ? this.steps : -1,
       this.currentStep,
+      this.params.mode,
       ...this.matrix.map((cell) => [
         cell.index,
         cell.isAlive ? 1 : 0,
@@ -333,33 +349,50 @@ export class Game implements IGame {
     localStorage.setItem("persisted_game", matrix_str);
   }
 
-  setState = (state: IGameState): void => {
+  setState = (state: IGameSerialized): void => {
     this.matrix = state.matrix.map((c) => ({ ...c }));
     this.matrixBuffer = state.matrix.map((c) => ({ ...c }));
-    this.score = state.score;
-    this.steps = state.steps;
-    this.currentStep = state.currentStep;
+    this.score = state.score || 0;
+    this.steps = state.steps || 0;
+    this.currentStep = state.currentStep || 0;
+    this.triggerChangeEvent();
   };
   setSpeed = (speed: number): void => {
     this.params.speed = speed;
+    this.triggerChangeEvent();
   };
   setViewport(viewport: IGameViewportUpdate) {
     this.viewport = { ...this.viewport, ...viewport };
     this.clean = false;
+    this.triggerChangeEvent();
   }
   setCols(cols: number) {
     if (this.params.cols !== cols) {
       this.params.cols = cols;
       this.reset();
+      this.triggerChangeEvent();
     }
   }
-  setColors = (colors: IGameColors) => {
-    this.colors = colors;
-  };
+  setMode = (mode: GameMode) => {
+    this.params.mode = mode;
+    this.triggerChangeEvent();
+  }
+
   onChange = (cb: GameStateChangeCallback): void => {
     if (this._gameStateChangeCallbacks.indexOf(cb) === -1) {
       this._gameStateChangeCallbacks.push(cb);
     }
+  };
+  triggerChangeEvent = () => {
+    this._gameStateChangeCallbacks.forEach((cb) =>
+      cb({
+        state: this.state,
+        cols: this.params.cols,
+        speed: this.params.speed,
+        mode: this.params.mode,
+        score: this.score,
+      })
+    );
   };
 
   toggleCell = (index: number) => {
@@ -368,9 +401,12 @@ export class Game implements IGame {
       this.matrix[index].isAlive = !this.matrix[index].isAlive;
       this.matrixBuffer[index].isAlive = this.matrix[index].isAlive;
       this.clean = false;
+      this.triggerChangeEvent();
     }
   };
   start = () => {
+    this.state = GameState.running;
+    this.triggerChangeEvent();
     let lastTimestamp = Date.now();
     const updateCallback = () => {
       const updateStepInterval = 100 / this.params.speed;
@@ -382,10 +418,8 @@ export class Game implements IGame {
         this.update(elapsedTime);
         if (this.clean) {
           shouldStop = true;
-          const changes = {
-            running: false,
-          };
-          this._gameStateChangeCallbacks.forEach((cb) => cb(changes));
+          this.state = GameState.paused;
+          this.triggerChangeEvent();
         }
         lastTimestamp = currentTimestamp;
         afterTimestamp = Date.now();
@@ -401,6 +435,8 @@ export class Game implements IGame {
   };
   stop = () => {
     clearTimeout(this.updateTimeout);
+    this.state = GameState.stopped;
+    this.triggerChangeEvent();
   };
 
   swap = () => {
@@ -412,35 +448,21 @@ export class Game implements IGame {
     const { matrix, matrixBuffer, siblingsMap } = this;
     let score = 0;
     matrix.forEach((cell, i) => {
+      const bufferCell = matrixBuffer[i];
       const isWallCell = this.isCellWall(cell);
       const sum = this.getSiblingsSum(siblingsMap[i]);
-      const isNewAlive = this.getCellAlive(cell, sum) || isWallCell;
 
-      const bufferCell = matrixBuffer[i];
-      if (isNewAlive) {
-        bufferCell.age = cell.isAlive ? cell.age + 1 : 1;
-      } else {
-        switch (true) {
-          case !cell.isAlive && cell.age < 0 && cell.age > -6:
-            bufferCell.age = cell.age - 1;
-            break;
-          case cell.isAlive:
-            bufferCell.age = -1;
-            break;
-          default:
-            bufferCell.age = 0;
-        }
-        // bufferCell.age = cell.age < -2 ? 0 : cell.isAlive ? -1 : cell.age - 1;
-      }
-      bufferCell.isAlive = isNewAlive;
+      bufferCell.isAlive = this.getCellAlive(cell, sum) || isWallCell;
+      bufferCell.age = this.getCellAge(cell, bufferCell);
       bufferCell.updated =
         cell.isAlive !== bufferCell.isAlive || cell.age !== bufferCell.age;
 
+      if (bufferCell.age > 0) {
+        score += Math.floor(16 / bufferCell.age); // Math.floor(((16 / cell.age) * elapsedTime) / 1000);
+      }
+
       if (cell.isAlive !== bufferCell.isAlive && this.clean) {
         this.clean = false;
-      }
-      if (cell.age > 0) {
-        score += Math.floor(16 / cell.age); // Math.floor(((16 / cell.age) * elapsedTime) / 1000);
       }
     });
     const currentLevel = Math.floor(this.score / 10000);
@@ -451,6 +473,12 @@ export class Game implements IGame {
     this.currentStep += 1;
 
     this.swap();
+  };
+
+  updateOnce = () => {
+    this.state = GameState.paused;
+    this.update(1);
+    this.triggerChangeEvent();
   };
 
   getSiblingsSum = (siblingsIndexes: number[]) => {
@@ -464,8 +492,29 @@ export class Game implements IGame {
     }, 0);
   };
 
-  isCellWall = (cell: ICell): boolean =>
-    cell.isAlive && cell.age > 12 && cell.age < 256;
+  isCellWall = (cell: ICell): boolean => {
+    if (this.params.mode === GameMode.madness) {
+      return cell.isAlive && cell.age > 12;
+    }
+    if (this.params.mode === GameMode.superpower) {
+      return cell.isAlive && cell.age > 12 && cell.age < 1024;
+    }
+    return false;
+  };
+
+  getCellAge = (oldCell: ICell, newCell: ICell) => {
+    if (newCell.isAlive) {
+      return oldCell.isAlive ? oldCell.age + 1 : 1;
+    }
+    switch (true) {
+      case !oldCell.isAlive && oldCell.age < 0 && oldCell.age > -12:
+        return oldCell.age - 1;
+      case oldCell.isAlive:
+        return -1;
+      default:
+        return 0;
+    }
+  };
 
   getCellAlive = (cell: ICell, sum: number): boolean => {
     if (cell.isAlive && sum > 1 && sum < 4) {
@@ -476,26 +525,42 @@ export class Game implements IGame {
     }
     return false;
   };
+
+  shadowCellColors = [
+    "#121212",
+    "#131313",
+    "#141414",
+    "#151515",
+    "#161616",
+    "#171717",
+    "#181818",
+    "#191919",
+    "#1a1a1a",
+    "#1b1b1b",
+    "#1c1c1c",
+    "#1d1d1d",
+    "#1d1d1d",
+  ];
   getCellColor = (cell: ICell) => {
     if (!cell.isAlive) {
       if (cell.age < 0) {
-        return ["#151515", "#171717", "#191919", '#1b1b1b', '#1d1d1d', "#1e1e1e"][-cell.age % 6];
+        const index = (-cell.age - 1) % this.shadowCellColors.length;
+        const color = this.shadowCellColors[index];
+        return color;
       }
-      return this.colors.deadCell;
+      return this.colors[this.state].deadCell;
     }
     switch (true) {
       case this.isCellWall(cell):
-        return this.colors.wallCell;
-      case cell.age < 0:
-        return "#000000";
+        return this.colors[this.state].wallCell;
       case cell.age > 16:
-        return this.colors.superOldCell;
+        return this.colors[this.state].superOldCell;
       case cell.age > 8:
-        return this.colors.veryOldCell;
+        return this.colors[this.state].veryOldCell;
       case cell.age > 2:
-        return this.colors.oldCell;
+        return this.colors[this.state].oldCell;
       default:
-        return this.colors.liveCell;
+        return this.colors[this.state].liveCell;
     }
   };
 

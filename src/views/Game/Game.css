@@ -29,7 +29,7 @@
   overflow: hidden;
 }
 .Controls.expand {
-  height: 250px;
+  height: 310px;
 }
 
 .Controls > .buttons {
@@ -114,7 +114,15 @@
 .grid-size-buttons {
   display: flex;
   justify-content: flex-start;
+  flex-shrink: 0;
+}
+
+.row {
   padding-bottom: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
   flex-shrink: 0;
 }
 

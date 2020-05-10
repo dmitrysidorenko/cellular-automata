@@ -8,7 +8,7 @@ import React, {
   useRef,
 } from "react";
 import * as ca from "../../ca";
-import { getRealMouseCoords, downloadCanvasAsImage } from "../../utils";
+import { getRealMouseCoords } from "../../utils";
 import { Playground } from "../../Playgraoud";
 import { Colors } from "../../design/palette";
 import PlasticButton from "../../components/Buttons/PlasticButton";
@@ -19,7 +19,7 @@ import { MenuIcon } from "../../components/Icons/MenuIcon";
 import { PlusIcon } from "../../components/Icons/PlusIcon";
 import { ReloadIcon } from "../../components/Icons/ReloadIcon";
 import "./Game.css";
-import { Game } from "../../lib/Game";
+import { Game, GameState, GameMode } from "../../lib/Game";
 import * as config from "../../config";
 
 const messages = {
@@ -65,8 +65,6 @@ function getCellIndexFromClick(
   return ca.point2index(cols, [row2, col2]);
 }
 
-const gtZero = (val: number) => (val < 1 ? 1 : val);
-
 const calcScaledCellWidth = (
   width: number,
   height: number,
@@ -92,28 +90,27 @@ const Dashboard = ({ game, borderColor }: IDashboardProps) => {
         game.scoreVelocity === 0
           ? "#ffffff"
           : game.scoreVelocity < 1500
-          ? game.colors.superOldCell
+          ? Colors.SuperOldCell
           : game.scoreVelocity < 3000
-          ? game.colors.veryOldCell
+          ? Colors.VeryOldCell
           : game.scoreVelocity < 6000
-          ? game.colors.oldCell
-          : game.colors.liveCell;
+          ? Colors.OldCell
+          : Colors.AliveCell;
       if (scoreRef.current) {
-        scoreRef.current.innerText = game.score.toLocaleString();
+        scoreRef.current.innerText = Number(game.score).toLocaleString();
         scoreRef.current.style.color = color;
       }
       if (leftRef.current) {
-        leftRef.current.innerText = game.steps
-          ? game.steps.toLocaleString()
-          : "-";
+        leftRef.current.innerText = Number(game.steps).toLocaleString();
       }
       if (stepsRef.current) {
         stepsRef.current.innerText = game.currentStep.toLocaleString();
       }
-      timeout = setTimeout(updateScore, 1000 / 30);
+      timeout = setTimeout(updateScore, 100);
     };
     updateScore();
     return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -127,7 +124,6 @@ const Dashboard = ({ game, borderColor }: IDashboardProps) => {
 
 type IGameComponentProps = {
   cols: number;
-  appState: APP_STATE;
   onToggleCell: (index: number) => void;
   playgroundStateRef: React.MutableRefObject<{
     scale: number;
@@ -143,8 +139,6 @@ const GameComponent = ({
   canvasRef,
   game,
 }: IGameComponentProps): ReactElement => {
-  console.log("draw GameComponent");
-
   useEffect(() => {
     game.draw();
   }, [game]);
@@ -217,14 +211,7 @@ const useWindowResize = () => {
   return [w, h];
 };
 
-enum APP_STATE {
-  Off = 0,
-  On = 1,
-  Sleep = 2,
-}
-
 function GameView() {
-  const restoredGame = useMemo(() => Game.restore(), []);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const playgroundRef = React.useRef<HTMLDivElement>(null);
   const [, setRandom] = React.useState<number>(0);
@@ -232,24 +219,47 @@ function GameView() {
     scale: number;
     translation: { x: number; y: number };
   }>({ scale: 1, translation: { x: 0, y: 0 } });
-  const [appState, setAppState] = React.useState<APP_STATE>(APP_STATE.Off);
-  const [cols, setCols] = React.useState(
-    restoredGame ? restoredGame.cols || 80 : 80
-  );
-  const [speed, setSpeed] = React.useState(
-    restoredGame ? restoredGame.speed || 1 : 1
-  );
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   const game = useMemo(() => {
+    const restoredGame = Game.restore();
+    const cols = restoredGame ? restoredGame.cols || 80 : 80;
+    const colorPalette = {
+      [GameState.running]: {
+        liveCell: Colors.AliveCell,
+        deadCell: Colors.DeadCell,
+        oldCell: Colors.OldCell,
+        veryOldCell: Colors.VeryOldCell,
+        superOldCell: Colors.SuperOldCell,
+        wallCell: Colors.WallCell,
+      },
+      [GameState.paused]: {
+        liveCell: Colors.AliveCell,
+        deadCell: Colors.DeadCell,
+        oldCell: Colors.OldCell,
+        veryOldCell: Colors.VeryOldCell,
+        superOldCell: Colors.SuperOldCell,
+        wallCell: Colors.WallCell,
+      },
+      [GameState.stopped]: {
+        liveCell: Colors.Secondary,
+        deadCell: Colors.DeadCell,
+        oldCell: Colors.Secondary,
+        veryOldCell: Colors.Secondary,
+        superOldCell: Colors.Secondary,
+        wallCell: Colors.WallCell,
+      },
+    };
     const gameInstance = new Game(
       {
         cols,
         speed: 1,
         viewport: playgroundStateRef.current,
+        mode: restoredGame ? restoredGame.mode : GameMode.classic,
       },
       canvasRef,
-      playgroundRef
+      playgroundRef,
+      colorPalette
     );
     if (restoredGame) {
       gameInstance.setState(restoredGame);
@@ -258,6 +268,14 @@ function GameView() {
     return gameInstance;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const [gameState, setGameState] = React.useState({
+    state: game.state,
+    cols: game.params.cols,
+    speed: game.params.speed,
+    score: game.score,
+    mode: game.params.mode,
+  });
 
   useEffect(() => {
     let timeout: any = null;
@@ -269,76 +287,25 @@ function GameView() {
     return () => clearTimeout(timeout);
   }, [game]);
 
-  useEffect(() => {
-    if (game.params.cols !== cols) {
-      game.setCols(cols);
-    }
-  }, [game, cols]);
-
-  useEffect(() => {
-    if (game.params.speed !== speed) {
-      game.setSpeed(speed);
-    }
-  }, [game, speed]);
-
   const resetMap = useCallback(() => {
-    setAppState(APP_STATE.Off);
-    game && game.reset();
+    game.stop();
+    game.reset();
   }, [game]);
 
   useEffect(() => {
-    game.onChange((changes) => {
-      setAppState(changes.running ? APP_STATE.On : APP_STATE.Sleep);
-    });
+    game.onChange(setGameState);
   }, [game]);
-
-  useEffect(() => {
-    if (appState === APP_STATE.Off) {
-      game.setColors({
-        liveCell: Colors.Secondary,
-        deadCell: Colors.DeadCell,
-        oldCell: Colors.Secondary,
-        veryOldCell: Colors.Secondary,
-        superOldCell: Colors.Secondary,
-        wallCell: Colors.WallCell,
-      });
-    } else {
-      game.setColors({
-        liveCell: Colors.AliveCell,
-        deadCell: Colors.DeadCell,
-        oldCell: Colors.OldCell,
-        veryOldCell: Colors.VeryOldCell,
-        superOldCell: Colors.SuperOldCell,
-        wallCell: Colors.WallCell,
-      });
-    }
-    if (appState === APP_STATE.On) {
-      game.start();
-    } else {
-      game.stop();
-    }
-    game.draw();
-  }, [appState, game]);
 
   useWindowResize();
 
-  const onColsChange = useCallback(
-    (value: number) => {
-      setAppState(APP_STATE.Off);
-      resetMap();
-      setCols(gtZero(value));
-    },
-    [resetMap]
-  );
-
   const onToggleCell = useCallback(
     (cellIndex: number) => {
-      if (appState === APP_STATE.Sleep) {
-        setAppState(APP_STATE.On);
-      }
       game.toggleCell(cellIndex);
+      if (gameState.state === GameState.paused) {
+        game.start();
+      }
     },
-    [game, appState, setAppState]
+    [game, gameState.state]
   );
 
   return (
@@ -346,9 +313,11 @@ function GameView() {
       <div
         className={`Controls${menuOpen ? " expand" : ""}`}
         style={{
-          borderColor: [Colors.Secondary, Colors.Danger, Colors.Secondary][
-            appState
-          ],
+          borderColor:
+            gameState.state === GameState.paused ||
+            gameState.state === GameState.stopped
+              ? Colors.Secondary
+              : Colors.Danger,
         }}
       >
         <div className="buttons">
@@ -357,9 +326,8 @@ function GameView() {
             size="small"
             onClick={(e: SyntheticEvent) => {
               if (game) {
-                setAppState(APP_STATE.Sleep);
-                game.update(1);
-                game.draw();
+                game.stop();
+                game.updateOnce();
               }
               e && e.stopPropagation && e.stopPropagation();
               e && e.preventDefault && e.preventDefault();
@@ -370,21 +338,32 @@ function GameView() {
           <PlasticButton
             size="medium"
             type={
-              appState === APP_STATE.On
+              gameState.state === GameState.running
                 ? "danger"
-                : appState === APP_STATE.Sleep
+                : gameState.state === GameState.paused
                 ? "secondary"
                 : "primary"
             }
             onClick={(e: SyntheticEvent) => {
-              setAppState(
-                appState === APP_STATE.Off ? APP_STATE.On : APP_STATE.Off
-              );
+              if (
+                gameState.state === GameState.running ||
+                gameState.state === GameState.paused
+              ) {
+                game.stop();
+              } else {
+                game.start();
+              }
               e && e.stopPropagation && e.stopPropagation();
               e && e.preventDefault && e.preventDefault();
             }}
           >
-            {[messages.startBtn, messages.stopBtn, messages.pauseBtn][appState]}
+            {
+              {
+                [GameState.stopped]: messages.startBtn,
+                [GameState.running]: messages.stopBtn,
+                [GameState.paused]: messages.pauseBtn,
+              }[gameState.state]
+            }
           </PlasticButton>
           <PlasticButton
             type="regular"
@@ -415,33 +394,61 @@ function GameView() {
           </PlasticButton>
         </div>
         <div className="extra">
-          <div className="grid-size-buttons">
-            {[0.5, 1, 2, 4, 8, 16].map((val) => (
-              <PlasticButton
-                type={speed === val ? "secondary" : "regular"}
-                size="small"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setSpeed(val);
-                }}
-              >
-                {String(val) + "x"}
-              </PlasticButton>
-            ))}
+          <div className="row">
+            <div className="grid-size-buttons">
+              {[0.5, 1, 2, 4, 8, 16].map((val) => (
+                <PlasticButton
+                  type={gameState.speed === val ? "secondary" : "regular"}
+                  size="small"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    game.setSpeed(val);
+                  }}
+                >
+                  {String(val) + "x"}
+                </PlasticButton>
+              ))}
+            </div>
           </div>
-          <div className="grid-size-buttons">
-            {[20, 40, 80, 160, 200, 240, 280].map((v) => (
-              <PlasticButton
-                type={cols === v ? "secondary" : "regular"}
-                size="small"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onColsChange(v);
-                }}
-              >
-                {String(v)}
-              </PlasticButton>
-            ))}
+
+          <div className="row">
+            <div style={{ marginRight: 4 }}>Mode</div>
+            <div className="grid-size-buttons">
+              {[GameMode.classic, GameMode.superpower, GameMode.madness].map(
+                (val) => (
+                  <PlasticButton
+                    type={gameState.mode === val ? "secondary" : "regular"}
+                    size="small"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      game.setMode(val);
+                    }}
+                  >
+                    {{
+                      [GameMode.classic]: '|',
+                      [GameMode.superpower]: '||',
+                      [GameMode.madness]: '|||',
+                    }[val]}
+                  </PlasticButton>
+                )
+              )}
+            </div>
+          </div>
+          <div className="row">
+            <div className="grid-size-buttons">
+              {[20, 40, 80, 160, 200, 240, 280].map((v) => (
+                <PlasticButton
+                  type={gameState.cols === v ? "secondary" : "regular"}
+                  size="small"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    game.setCols(v);
+                  }}
+                >
+                  {String(v)}
+                </PlasticButton>
+              ))}
+            </div>
           </div>
           {/* <PlasticButton
             onClick={(e) => {
@@ -459,8 +466,40 @@ function GameView() {
             <PlasticButton
               type="regular"
               size="small"
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.preventDefault();
+                try {
+                  await caches
+                    .keys()
+                    .then((cachesNames) => {
+                      if (document.defaultView) {
+                        console.log(
+                          "Delete " +
+                            document.defaultView.location.origin +
+                            " caches"
+                        );
+                      }
+                      return Promise.all(
+                        cachesNames.map(function (cacheName) {
+                          return caches.delete(cacheName).then(function () {
+                            console.log(
+                              "Cache with name " + cacheName + " is deleted"
+                            );
+                          });
+                        })
+                      );
+                    })
+                    .then(function () {
+                      if (document.defaultView) {
+                        console.log(
+                          "All " +
+                            document.defaultView.location.origin +
+                            " caches are deleted"
+                        );
+                      }
+                    });
+                } catch (error) {}
+
                 window.location.reload();
               }}
             >
@@ -480,14 +519,16 @@ function GameView() {
         <Dashboard
           game={game}
           borderColor={
-            [Colors.Secondary, Colors.Danger, Colors.Secondary][appState]
+            gameState.state === GameState.paused ||
+            gameState.state === GameState.stopped
+              ? Colors.Secondary
+              : Colors.Danger
           }
         />
         <Playground minScale={1} maxScale={20} refApi={playgroundStateRef}>
           <GameComponent
             game={game}
-            cols={cols}
-            appState={appState}
+            cols={gameState.cols}
             onToggleCell={onToggleCell}
             playgroundStateRef={playgroundStateRef}
             canvasRef={canvasRef}
