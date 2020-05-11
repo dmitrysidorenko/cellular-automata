@@ -13,8 +13,8 @@
   font-size: 15px;
   font-weight: 300;
   background-color: var(--Background);
-  border: 1px solid var(--Background);
-  box-shadow: 0px 0px 0px 1px var(--Text);
+  border: 0px solid var(--Background);
+  box-shadow: 0px 0px 0px 2px var(--Text);
   color: var(--Text);
   text-shadow: none;
 }
@@ -45,17 +45,17 @@
 .PlasticButton.primary {
   background-color: var(--Primary);
   color: var(--Background);
-  text-shadow: 0px 1px 0px var(--Text);
+  text-shadow: 1px 1px 0px var(--Text);
 }
 .PlasticButton.danger {
   background-color: var(--Danger);
   color: var(--Text);
-  text-shadow: 0px 1px 0px var(--Background);
+  text-shadow: 1px 1px 0px var(--Background);
 }
 .PlasticButton.secondary {
   background-color: var(--Secondary);
   color: var(--Text);
-  text-shadow: 0px 1px 0px var(--Background);
+  text-shadow: 1px 1px 0px var(--Background);
 }
 .PlasticButton:active {
   transform: scale(0.95);

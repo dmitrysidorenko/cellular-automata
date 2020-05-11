@@ -210,8 +210,12 @@ interface IGame {
   onChange(cb: GameStateChangeCallback): void;
 }
 
-const calcCellWidth = (width: number, height: number, cols: number) => {
-  const cellWidth = Math.min(width, height) / cols;
+const calcCellWidth = (
+  screenWidth: number,
+  screenHeight: number,
+  cols: number
+) => {
+  const cellWidth = Math.min(screenWidth, screenHeight) / cols;
   return cellWidth;
 };
 
@@ -221,6 +225,7 @@ export enum GameState {
   paused,
 }
 type GameChangeStateEvent = {
+  ready: boolean;
   state: GameState;
   cols: number;
   speed: number;
@@ -268,6 +273,7 @@ export class Game implements IGame {
   };
   private ctx: CanvasRenderingContext2D | null;
   public state: GameState = GameState.stopped;
+  ready: boolean = false;
 
   constructor(
     public params: IGameParams,
@@ -281,11 +287,6 @@ export class Game implements IGame {
   ) {
     this.generation = 0;
     this.ctx = null;
-    if (canvasRef.current) {
-      this.ctx = canvasRef.current.getContext("2d", {
-        alpha: ENABLE_CANVAS_ALPHA,
-      });
-    }
     this.matrix = [];
     this.matrixBuffer = [];
     this.siblingsMap = [];
@@ -305,6 +306,7 @@ export class Game implements IGame {
     this.scoreVelocity = 0;
     this.steps = config.startTogglePoints;
     this.currentStep = 0;
+    this.triggerChangeEvent();
   };
 
   static restore(): IGameSerialized | null {
@@ -376,7 +378,7 @@ export class Game implements IGame {
   setMode = (mode: GameMode) => {
     this.params.mode = mode;
     this.triggerChangeEvent();
-  }
+  };
 
   onChange = (cb: GameStateChangeCallback): void => {
     if (this._gameStateChangeCallbacks.indexOf(cb) === -1) {
@@ -384,15 +386,16 @@ export class Game implements IGame {
     }
   };
   triggerChangeEvent = () => {
-    this._gameStateChangeCallbacks.forEach((cb) =>
-      cb({
-        state: this.state,
-        cols: this.params.cols,
-        speed: this.params.speed,
-        mode: this.params.mode,
-        score: this.score,
-      })
-    );
+    const event: GameChangeStateEvent = {
+      ready: this.ready,
+      state: this.state,
+      cols: this.params.cols,
+      speed: this.params.speed,
+      mode: this.params.mode,
+      score: this.score,
+    };
+    console.log("GameChangeStateEvent", event);
+    this._gameStateChangeCallbacks.forEach((cb) => cb(event));
   };
 
   toggleCell = (index: number) => {
@@ -584,18 +587,19 @@ export class Game implements IGame {
       this.ctx = this.canvasRef.current.getContext("2d", {
         alpha: ENABLE_CANVAS_ALPHA,
       });
+      if (!this.ready) {
+        this.ready = true;
+        this.triggerChangeEvent();
+      }
     }
+    return null;
   };
 
+  calcCellWidth = calcCellWidth;
   draw = () => {
-    if (!this.ctx && !this.canvasRef.current) {
+    const ctx = this.getCanvasCtx();
+    if (!ctx) {
       return;
-    }
-
-    if (!this.ctx && this.canvasRef.current) {
-      this.ctx = this.canvasRef.current.getContext("2d", {
-        alpha: ENABLE_CANVAS_ALPHA,
-      });
     }
     const cols = this.params.cols;
     const width = this.getWidth();
@@ -604,7 +608,7 @@ export class Game implements IGame {
     const translation = this.viewport.translation;
     const offsetX = translation.x;
     const offsetY = translation.y;
-    const cellWidth = calcCellWidth(width, height, cols);
+    const cellWidth = this.calcCellWidth(width, height, cols);
     const cellWidthScaled = cellWidth * scale;
     this.options.cellWidth = cellWidthScaled;
     this.options.cellHeight = cellWidthScaled;
@@ -619,7 +623,7 @@ export class Game implements IGame {
     const offsetYCols = -Math.ceil(offsetY / cellWidthScaled);
     this.canvasRef.current &&
       prepareCanvas(
-        this.ctx,
+        ctx,
         this.canvasRef.current,
         width,
         height,
@@ -649,7 +653,7 @@ export class Game implements IGame {
           const y = cell.y + rs * cols;
           // debugger;
           const color = this.getCellColor(cell);
-          drawCell(this.ctx, cell, x, y, this.options, color, k);
+          drawCell(ctx, cell, x, y, this.options, color, k);
         } else {
           // debugger;
         }

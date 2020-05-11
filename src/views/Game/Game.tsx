@@ -265,6 +265,10 @@ function GameView() {
       gameInstance.setState(restoredGame);
     }
     (window as any)["GGG"] = gameInstance;
+    gameInstance.onChange((s) => {
+      console.log("s", s);
+      setGameState((st: any) => ({ ...st, ...s }));
+    });
     return gameInstance;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -275,6 +279,7 @@ function GameView() {
     speed: game.params.speed,
     score: game.score,
     mode: game.params.mode,
+    ready: game.ready,
   });
 
   useEffect(() => {
@@ -292,10 +297,6 @@ function GameView() {
     game.reset();
   }, [game]);
 
-  useEffect(() => {
-    game.onChange(setGameState);
-  }, [game]);
-
   useWindowResize();
 
   const onToggleCell = useCallback(
@@ -307,6 +308,24 @@ function GameView() {
     },
     [game, gameState.state]
   );
+
+  const { minScale, maxScale } = useMemo(() => {
+    const screenWidth = game.getWidth();
+    const screenHeight = game.getHeight();
+    const cellSize = game.calcCellWidth(
+      screenWidth,
+      screenHeight,
+      gameState.cols
+    );
+    const minCellSize = 1.32;
+    const maxCellSize = 60;
+    const min = minCellSize / (cellSize ? cellSize : 1);
+    const max = maxCellSize / (cellSize ? cellSize : 1);
+    return {
+      minScale: min,
+      maxScale: max,
+    };
+  }, [game, gameState]);
 
   return (
     <div className="App">
@@ -424,11 +443,13 @@ function GameView() {
                       game.setMode(val);
                     }}
                   >
-                    {{
-                      [GameMode.classic]: '|',
-                      [GameMode.superpower]: '||',
-                      [GameMode.madness]: '|||',
-                    }[val]}
+                    {
+                      {
+                        [GameMode.classic]: "|",
+                        [GameMode.superpower]: "||",
+                        [GameMode.madness]: "|||",
+                      }[val]
+                    }
                   </PlasticButton>
                 )
               )}
@@ -525,7 +546,11 @@ function GameView() {
               : Colors.Danger
           }
         />
-        <Playground minScale={1} maxScale={20} refApi={playgroundStateRef}>
+        <Playground
+          minScale={minScale}
+          maxScale={maxScale}
+          refApi={playgroundStateRef}
+        >
           <GameComponent
             game={game}
             cols={gameState.cols}
