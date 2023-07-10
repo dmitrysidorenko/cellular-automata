@@ -35,7 +35,7 @@ const messages = {
 const CanvasWrapperStyle = { width: "100%", height: "100%" };
 
 function getCellIndexFromClick(
-  e: MouseEvent,
+  e: React.MouseEvent<HTMLCanvasElement>,
   canvas: HTMLCanvasElement,
   {
     offsetX,
@@ -144,7 +144,7 @@ const GameComponent = ({
   }, [game]);
 
   useEffect(() => {
-    const rate = 60;
+    const rate = 30;
     const frameRateX = 1000 / rate;
     let last = Date.now();
     let index: any = null;
@@ -165,7 +165,7 @@ const GameComponent = ({
   }, [game]);
 
   const onCanvasClick = useCallback(
-    (e) => {
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
       e.preventDefault();
       if (!canvasRef.current) {
         return;
@@ -288,7 +288,7 @@ function GameView() {
       game.persist();
       setTimeout(fn, 5000);
     };
-    setTimeout(fn, 5000);
+    // setTimeout(fn, 5000);
     return () => clearTimeout(timeout);
   }, [game]);
 
@@ -417,6 +417,7 @@ function GameView() {
             <div className="grid-size-buttons">
               {[0.5, 1, 2, 4, 8, 16].map((val) => (
                 <PlasticButton
+                  key={val}
                   type={gameState.speed === val ? "secondary" : "regular"}
                   size="small"
                   onClick={(e) => {
@@ -436,6 +437,7 @@ function GameView() {
               {[GameMode.classic, GameMode.superpower, GameMode.madness].map(
                 (val) => (
                   <PlasticButton
+                    key={val}
                     type={gameState.mode === val ? "secondary" : "regular"}
                     size="small"
                     onClick={(e) => {
@@ -459,6 +461,7 @@ function GameView() {
             <div className="grid-size-buttons">
               {[20, 40, 80, 160, 200, 240, 280].map((v) => (
                 <PlasticButton
+                  key={v}
                   type={gameState.cols === v ? "secondary" : "regular"}
                   size="small"
                   onClick={(e) => {

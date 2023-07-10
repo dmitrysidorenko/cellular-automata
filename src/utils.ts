@@ -1,6 +1,9 @@
 import { useRef, useEffect } from "react";
 
-export function getRealMouseCoords(el: HTMLElement, event: MouseEvent) {
+export function getRealMouseCoords(
+  el: HTMLElement,
+  event: React.MouseEvent<HTMLCanvasElement>
+) {
   var totalOffsetX = 0;
   var totalOffsetY = 0;
   var canvasX = 0;
@@ -42,8 +45,10 @@ export function downloadCanvasAsImage(canvas: HTMLCanvasElement) {
   let downloadLink = document.createElement("a");
   downloadLink.setAttribute("download", "CanvasAsImage.png");
   canvas.toBlob(function (blob) {
-    let url = URL.createObjectURL(blob);
-    downloadLink.setAttribute("href", url);
-    downloadLink.click();
+    if (blob) {
+      let url = URL.createObjectURL(blob);
+      downloadLink.setAttribute("href", url);
+      downloadLink.click();
+    }
   });
 }

@@ -37,7 +37,7 @@ type MapInteractionProps = {
   children: (props: {
     scale: number;
     translation: Translation;
-  }) => React.ReactElement | React.ReactChildren | React.ReactNode;
+  }) => React.ReactElement | React.ReactNode;
   scale: number;
   translation: Translation;
   defaultScale: number;
@@ -331,12 +331,8 @@ class MapInteraction extends Component<
     props: MapInteractionProps = this.props
   ) => {
     const { x, y } = desiredTranslation;
-    let {
-      xMax,
-      xMin,
-      yMax,
-      yMin,
-    } = props.translationBounds as TranslationBounds;
+    let { xMax, xMin, yMax, yMin } =
+      props.translationBounds as TranslationBounds;
     xMin = xMin !== undefined ? xMin : -Infinity;
     yMin = yMin !== undefined ? yMin : -Infinity;
     xMax = xMax !== undefined ? xMax : Infinity;
@@ -518,13 +514,12 @@ class MapInteraction extends Component<
         onClickCapture={handleTouchOrClickCapture}
         onTouchEndCapture={handleTouchOrClickCapture}
       >
-        {(children || undefined) &&
-          children({
-            translation,
-            scale,
-            // offsetHeight: getOffsetHeight(this.containerNode),
-            // offsetWidth: getOffsetWidth(this.containerNode)
-          })}
+        {children({
+          translation,
+          scale,
+          // offsetHeight: getOffsetHeight(this.containerNode),
+          // offsetWidth: getOffsetWidth(this.containerNode)
+        })}
         {(showControls || undefined) && this.renderControls()}
       </div>
     );

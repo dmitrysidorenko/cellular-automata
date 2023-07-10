@@ -8,7 +8,7 @@ declare global {
     Colors: Colors;
   }
 }
-window.Colors = Colors;
+// window.Colors = Colors;
 
 const colors = {
   grid: Colors.Background,
@@ -93,8 +93,8 @@ function drawCell(
   ) {
     drawRect(
       ctx,
-      cell.isAlive ? x + k : x + k,
-      cell.isAlive ? y + k : y + k,
+      x + k,
+      y + k,
       options.cellWidth - k * 2,
       options.cellHeight - k * 2,
       color,
@@ -275,6 +275,9 @@ export class Game implements IGame {
   public state: GameState = GameState.stopped;
   ready: boolean = false;
 
+  private offscreenCanvas: HTMLCanvasElement;
+  private offscreenCtx: CanvasRenderingContext2D | null;
+
   constructor(
     public params: IGameParams,
     protected canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
@@ -293,6 +296,8 @@ export class Game implements IGame {
     this.viewport = params.viewport;
     this.clean = false;
     this.reset();
+    this.offscreenCanvas = document.createElement("canvas");
+    this.offscreenCtx = this.offscreenCanvas.getContext("2d");
     window.addEventListener("unload", () => this.persist());
   }
 
@@ -630,16 +635,39 @@ export class Game implements IGame {
         cellWidthScaled
       );
     const k = scale > 3 ? 1 : scale > 5 ? 2 : 0;
-    for (
-      let rowV = offsetYCols;
-      rowV <= colsYVisible + offsetYCols;
-      rowV += 1
-    ) {
-      for (
-        let colV = offsetXCols;
-        colV <= colsXVisible + offsetXCols;
-        colV += 1
-      ) {
+    const rowMax = colsYVisible + offsetYCols;
+    const colMax = colsXVisible + offsetXCols;
+    // const totalCellsToRender = (cols * cols) / scale;
+    // const totalCells = cols * cols;
+    // console.log({ rowMax, colMax, totalCells, totalCellsToRender });
+    // if totalCellsToRender > totalCells
+    //     render totalCells to canvas and then tile it on
+    // if (totalCells < totalCellsToRender) {
+    //   prepareCanvas(ctx, this.offscreenCanvas, width, height, cellWidthScaled);
+    //   for (let index = 0; index < this.matrix.length; index++) {
+    //     const cell = this.matrix[index];
+    //     if (cell) {
+    //       const x = Math.round(cell.x + cols);
+    //       const y = Math.round(cell.y + cols);
+    //       // debugger;
+    //       const color = this.getCellColor(cell);
+    //       drawCell(this.offscreenCtx, cell, x, y, this.options, color, 0);
+    //     }
+    //   }
+    //   if (this.ctx) {
+    //     const pattern = this.ctx.createPattern(this.offscreenCanvas, "repeat");
+    //     if (pattern) {
+    //       this.ctx.fillStyle = pattern;
+    //       ctx.fillRect(0, 0, width, height);
+    //     }
+    //   }
+    //   this.clean = true;
+    //   return;
+    // }
+
+    let i = 0;
+    for (let rowV = offsetYCols; rowV <= rowMax; rowV += 1) {
+      for (let colV = offsetXCols; colV <= colMax; colV += 1) {
         const rNew = rowV % cols;
         const cNew = colV % cols;
         const r = rNew < 0 ? cols + rNew : rNew;
@@ -654,11 +682,13 @@ export class Game implements IGame {
           // debugger;
           const color = this.getCellColor(cell);
           drawCell(ctx, cell, x, y, this.options, color, k);
+          // i++;
         } else {
           // debugger;
         }
       }
     }
+    // console.log(scale, totalCells, colsYVisible * colsXVisible, i);
 
     this.clean = true;
   };
