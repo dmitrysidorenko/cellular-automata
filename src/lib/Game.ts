@@ -1,11 +1,11 @@
 import React from "react";
 import * as ca from "../ca";
-import { Colors } from "../design/palette";
+import { Colors, ColorPalette } from "../design/palette";
 import * as config from "../config";
 
 declare global {
   interface Window {
-    Colors: Colors;
+    Colors: ColorPalette;
   }
 }
 // window.Colors = Colors;
@@ -665,7 +665,7 @@ export class Game implements IGame {
     //   return;
     // }
 
-    let i = 0;
+    // let i = 0;
     for (let rowV = offsetYCols; rowV <= rowMax; rowV += 1) {
       for (let colV = offsetXCols; colV <= colMax; colV += 1) {
         const rNew = rowV % cols;

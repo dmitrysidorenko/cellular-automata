@@ -1,4 +1,4 @@
-export type Colors = {
+export interface ColorPalette {
   Background: string;
   Border: string;
   Text: string;
@@ -13,9 +13,9 @@ export type Colors = {
   SuperOldCell: string;
   DeadCell: string;
   WallCell: string;
-};
+}
 
-export const Colors: Colors = {
+export const Colors: ColorPalette = {
   Background: "#000000",
   Border: "#ffffff",
   Text: "#ffffff",

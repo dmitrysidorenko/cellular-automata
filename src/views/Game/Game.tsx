@@ -288,7 +288,7 @@ function GameView() {
       game.persist();
       setTimeout(fn, 5000);
     };
-    // setTimeout(fn, 5000);
+    setTimeout(fn, 5000);
     return () => clearTimeout(timeout);
   }, [game]);
 
